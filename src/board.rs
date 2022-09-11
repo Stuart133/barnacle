@@ -1,5 +1,5 @@
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Piece {
+pub enum Piece {
     King,
     Queen,
     Rook,
@@ -9,17 +9,18 @@ enum Piece {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Side {
+pub enum Side {
     White,
     Black,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct Space {
+pub struct Space {
     piece: Piece,
     side: Side,
 }
 
+#[derive(Clone, Debug)]
 pub struct Board([[Option<Space>; 8]; 8]);
 
 impl Board {
@@ -27,7 +28,7 @@ impl Board {
     pub fn new() -> Self {
       Board([
         [Some(Space { piece: Piece::Rook, side: Side::White }), Some(Space { piece: Piece::Knight, side: Side::White }), Some(Space { piece: Piece::Bishop, side: Side::White }),
-          Some(Space { piece: Piece::Queen, side: Side::White }), Some(Space { piece: Piece::King, side: Side::White }), Some(Space { piece: Piece::Bishop, side: Side::White }),
+          Some(Space { piece: Piece::King, side: Side::White }), Some(Space { piece: Piece::Queen, side: Side::White }), Some(Space { piece: Piece::Bishop, side: Side::White }),
           Some(Space { piece: Piece::Knight, side: Side::White }), Some(Space { piece: Piece::Rook, side: Side::White })],
         [Some(Space { piece: Piece::Pawn, side: Side::White }); 8],
         [None; 8],
@@ -36,8 +37,20 @@ impl Board {
         [None; 8],
         [Some(Space { piece: Piece::Pawn, side: Side::Black }); 8],
         [Some(Space { piece: Piece::Rook, side: Side::Black }), Some(Space { piece: Piece::Knight, side: Side::Black }), Some(Space { piece: Piece::Bishop, side: Side::Black }),
-          Some(Space { piece: Piece::Queen, side: Side::Black }), Some(Space { piece: Piece::King, side: Side::Black }), Some(Space { piece: Piece::Bishop, side: Side::Black }),
+          Some(Space { piece: Piece::King, side: Side::Black }), Some(Space { piece: Piece::Queen, side: Side::Black }), Some(Space { piece: Piece::Bishop, side: Side::Black }),
           Some(Space { piece: Piece::Knight, side: Side::Black }), Some(Space { piece: Piece::Rook, side: Side::Black })],
       ])
+    }
+
+    pub fn generate_moves(&self, player: Side) {
+        let new_board = self.clone();
+
+        for row in self.0.iter() {
+            for space in row.iter() {
+                println!("{:?}", space);
+            }
+        }
+
+        ()
     }
 }
