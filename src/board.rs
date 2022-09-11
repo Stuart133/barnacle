@@ -47,7 +47,18 @@ impl Board {
 
         for row in self.0.iter() {
             for space in row.iter() {
-                println!("{:?}", space);
+                if let Some(space) = space {
+                    if space.side == player {
+                        match space.piece {
+                            Piece::King => todo!(),
+                            Piece::Queen => todo!(),
+                            Piece::Rook => todo!(),
+                            Piece::Knight => todo!(),
+                            Piece::Bishop => todo!(),
+                            Piece::Pawn => todo!(),
+                        }
+                    }
+                }
             }
         }
 
