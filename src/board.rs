@@ -27,7 +27,26 @@ impl Space {
         match self.piece {
             Piece::King => todo!(),
             Piece::Queen => todo!(),
-            Piece::Rook => todo!(),
+            Piece::Rook => {
+                vec![
+                    (x, 0),
+                    (x, 1),
+                    (x, 2),
+                    (x, 3),
+                    (x, 4),
+                    (x, 5),
+                    (x, 6),
+                    (x, 7),
+                    (0, y),
+                    (1, y),
+                    (2, y),
+                    (3, y),
+                    (4, y),
+                    (5, y),
+                    (6, y),
+                    (7, y),
+                ]
+            }
             Piece::Knight => todo!(),
             Piece::Bishop => todo!(),
             Piece::Pawn => {
@@ -48,6 +67,9 @@ impl Space {
         }
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct X88Board([Option<Space>; 128]);
 
 #[derive(Clone, Debug)]
 pub struct Board([[Option<Space>; BOARD_SIZE]; BOARD_SIZE]);
