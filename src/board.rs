@@ -66,8 +66,8 @@ impl Board {
                 if space.side == player {
                     match space.piece {
                         Piece::King => todo!(),
-                        Piece::Queen => todo!(),
-                        Piece::Rook => todo!(),
+                        Piece::Queen => self.generate_queen_moves(&mut moves, i),
+                        Piece::Rook => self.generate_rook_moves(&mut moves, i),
                         Piece::Knight => todo!(),
                         Piece::Bishop => self.generate_bishop_moves(&mut moves, i),
                         Piece::Pawn => todo!(),
@@ -80,6 +80,13 @@ impl Board {
     }
 
     // Individual peice move functions to ease testing
+    #[inline(always)]
+    fn generate_queen_moves(&self, moves: &mut Vec<Board>, i: usize) {
+        // Queen moves as the union of rook and bishop
+        self.generate_rook_moves(moves, i);
+        self.generate_bishop_moves(moves, i);
+    }
+
     #[inline(always)]
     fn generate_bishop_moves(&self, moves: &mut Vec<Board>, i: usize) {
         self.make_sliding_moves(moves, i, |i| i + UP_RIGHT);
@@ -96,6 +103,28 @@ impl Board {
             // Invert UP_LEFT becomes DOWN_RIGHT
             // If we underflow we're off the bottom, so set to a know fail value
             match i.checked_sub(UP_LEFT) {
+                Some(i) => i,
+                None => 0x88,
+            }
+        });
+    }
+
+    #[inline(always)]
+    fn generate_rook_moves(&self, moves: &mut Vec<Board>, i: usize) {
+        self.make_sliding_moves(moves, i, |i| i + RIGHT);
+        self.make_sliding_moves(moves, i, |i| i + UP);
+        self.make_sliding_moves(moves, i, |i| {
+            // Invert UP becomes DOWN
+            // If we underflow we're off the bottom, so set to a know fail value
+            match i.checked_sub(UP) {
+                Some(i) => i,
+                None => 0x88,
+            }
+        });
+        self.make_sliding_moves(moves, i, |i| {
+            // Invert RIGHT becomes LEFT
+            // If we underflow we're off the bottom, so set to a know fail value
+            match i.checked_sub(RIGHT) {
                 Some(i) => i,
                 None => 0x88,
             }
@@ -141,6 +170,34 @@ mod tests {
     use super::*;
 
     #[test]
+    pub fn queen_moves_from_start() {
+        let board = Board::new();
+        let mut moves = vec![];
+
+        // D1
+        board.generate_queen_moves(&mut moves, 2);
+        assert_eq!(0, moves.len());
+        // D8
+        board.generate_queen_moves(&mut moves, 114);
+        assert_eq!(0, moves.len());
+    }
+
+    #[test]
+    pub fn queen_moves_from_middle() {
+        let mut board = Board::new();
+        let mut moves = vec![];
+
+        // Place bishop on D5
+        board.0[67] = Some(Space {
+            piece: Piece::Queen,
+            side: Side::White,
+        });
+
+        board.generate_queen_moves(&mut moves, 67);
+        assert_eq!(19, moves.len());
+    }
+
+    #[test]
     pub fn bishop_moves_from_start() {
         let board = Board::new();
         let mut moves = vec![];
@@ -157,7 +214,6 @@ mod tests {
         // F8
         board.generate_bishop_moves(&mut moves, 117);
         assert_eq!(0, moves.len());
-        assert_eq!(Piece::Bishop, board.0[117].unwrap().piece);
     }
 
     #[test]
@@ -188,5 +244,39 @@ mod tests {
 
         board.generate_bishop_moves(&mut moves, 65);
         assert_eq!(6, moves.len());
+    }
+
+    #[test]
+    pub fn rook_moves_from_start() {
+        let board = Board::new();
+        let mut moves = vec![];
+
+        // A1
+        board.generate_rook_moves(&mut moves, 0);
+        assert_eq!(0, moves.len());
+        // H1
+        board.generate_rook_moves(&mut moves, 7);
+        assert_eq!(0, moves.len());
+        // A8
+        board.generate_rook_moves(&mut moves, 112);
+        assert_eq!(0, moves.len());
+        // H8
+        board.generate_rook_moves(&mut moves, 119);
+        assert_eq!(0, moves.len());
+    }
+
+    #[test]
+    pub fn rook_moves_from_middle() {
+        let mut board = Board::new();
+        let mut moves = vec![];
+
+        // Place rook on D5
+        board.0[67] = Some(Space {
+            piece: Piece::Rook,
+            side: Side::White,
+        });
+
+        board.generate_rook_moves(&mut moves, 67);
+        assert_eq!(11, moves.len());
     }
 }
