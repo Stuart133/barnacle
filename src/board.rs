@@ -51,8 +51,8 @@ impl Board {
         ])
     }
 
-    pub fn generate_moves(&self, player: Side) {
-        let new_board = self.clone();
+    pub fn generate_moves(&self, player: Side) -> Vec<Board> {
+        let mut moves = vec![];
 
         for (i, space) in self.0.iter().enumerate() {
             if let Some(space) = space {
@@ -63,17 +63,21 @@ impl Board {
                         Piece::Rook => todo!(),
                         Piece::Knight => todo!(),
                         Piece::Bishop => {
-                            let index = i + 17;
-                            if index & 0x88 != 0 {
-                                match self.0[index] {
-                                    Some(Space { side: Side::White, .. }) => {},
-                                    Some(Space { side: Side::Black, .. }) => {},
-                                    // Valid position to move to
-                                    None => {
-                                        let mut new_board = self.clone();
-                                        new_board.0[i + 17] = new_board.0[i];
-                                        new_board.0[i] = None;
-                                    },
+                            let mut index = i;
+                            loop {
+                                index += 17;
+                                if index & 0x88 != 0 {
+                                    match self.0[index] {
+                                        Some(target) => {
+                                            if target.side != player {
+                                                moves.push(self.make_move(i, index));
+                                            }
+                                            break;
+                                        },
+                                        None => {
+                                            moves.push(self.make_move(i, index));
+                                        },
+                                    }
                                 }
                             }
                         },
@@ -83,7 +87,16 @@ impl Board {
             }
         }
 
-        ()
+        moves
+    }
+
+    #[inline(always)]
+    fn make_move(&self, src: usize, dest: usize) -> Board {
+        let mut new_board = self.clone();
+        new_board.0[dest] = new_board.0[src];
+        new_board.0[src] = None;
+
+        new_board
     }
 }
 
