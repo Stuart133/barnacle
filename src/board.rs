@@ -159,4 +159,34 @@ mod tests {
         assert_eq!(0, moves.len());
         assert_eq!(Piece::Bishop, board.0[117].unwrap().piece);
     }
+
+    #[test]
+    pub fn bishop_moves_from_middle() {
+        let mut board = Board::new();
+        let mut moves = vec![];
+
+        // Place bishop on D5
+        board.0[67] = Some(Space {
+            piece: Piece::Bishop,
+            side: Side::White,
+        });
+
+        board.generate_bishop_moves(&mut moves, 67);
+        assert_eq!(8, moves.len());
+    }
+
+    #[test]
+    pub fn bishop_moves_from_side() {
+        let mut board = Board::new();
+        let mut moves = vec![];
+
+        // Place bishop on B5
+        board.0[65] = Some(Space {
+            piece: Piece::Bishop,
+            side: Side::White,
+        });
+
+        board.generate_bishop_moves(&mut moves, 65);
+        assert_eq!(6, moves.len());
+    }
 }
