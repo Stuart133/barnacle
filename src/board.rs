@@ -71,7 +71,7 @@ impl Board {
                         Piece::Rook => self.generate_rook_moves(&mut moves, i),
                         Piece::Knight => self.generate_knight_moves(&mut moves, i),
                         Piece::Bishop => self.generate_bishop_moves(&mut moves, i),
-                        Piece::Pawn => todo!(),
+                        Piece::Pawn => self.generate_pawn_moves(&mut moves, i),
                     }
                 }
             }
@@ -82,28 +82,102 @@ impl Board {
 
     // Individual peice move functions to ease testing
     #[inline(always)]
-    fn generate_knight_moves(&self, moves: &mut Vec<Board>, i: usize) {
+    fn generate_pawn_moves(&self, moves: &mut Vec<Board>, src: usize) {
+        // TODO: En passent
+        match self.0[src]
+            .expect("generate pawn moves called on empty space")
+            .side
+        {
+            Side::White => {
+                let dest = src + UP;
+                if dest & 0x88 == 0 {
+                    if let None = self.0[dest] {
+                        moves.push(self.make_move(src, dest));
+                    }
+                }
+                let dest = src + UP_RIGHT;
+                if dest & 0x88 == 0 {
+                    if let Some(Space {
+                        side: Side::Black, ..
+                    }) = self.0[dest]
+                    {
+                        moves.push(self.make_move(src, dest));
+                    }
+                }
+                let dest = src + UP_LEFT;
+                if dest & 0x88 == 0 {
+                    if let Some(Space {
+                        side: Side::Black, ..
+                    }) = self.0[dest]
+                    {
+                        moves.push(self.make_move(src, dest));
+                    }
+                }
+            }
+            Side::Black => {
+                match src.checked_sub(UP) {
+                    Some(dest) => {
+                        if dest & 0x88 == 0 {
+                            if let None = self.0[dest] {
+                                moves.push(self.make_move(src, dest));
+                            }
+                        }
+                    }
+                    None => {}
+                }
+                match src.checked_sub(UP_RIGHT) {
+                    Some(dest) => {
+                        if dest & 0x88 == 0 {
+                            if let Some(Space {
+                                side: Side::White, ..
+                            }) = self.0[dest]
+                            {
+                                moves.push(self.make_move(src, dest));
+                            }
+                        }
+                    }
+                    None => {}
+                }
+                match src.checked_sub(UP_LEFT) {
+                    Some(dest) => {
+                        if dest & 0x88 == 0 {
+                            if let Some(Space {
+                                side: Side::White, ..
+                            }) = self.0[dest]
+                            {
+                                moves.push(self.make_move(src, dest));
+                            }
+                        }
+                    }
+                    None => {}
+                }
+            }
+        }
+    }
+
+    #[inline(always)]
+    fn generate_knight_moves(&self, moves: &mut Vec<Board>, src: usize) {
         KNIGHT_MOVES.iter().for_each(|offset| {
-            self.make_jump_move(moves, i, i + offset);
-            match i.checked_sub(*offset) {
-                Some(dest) => self.make_jump_move(moves, i, dest),
+            self.make_jump_move(moves, src, src + offset);
+            match src.checked_sub(*offset) {
+                Some(dest) => self.make_jump_move(moves, src, dest),
                 None => {}
             }
         })
     }
 
     #[inline(always)]
-    fn generate_queen_moves(&self, moves: &mut Vec<Board>, i: usize) {
+    fn generate_queen_moves(&self, moves: &mut Vec<Board>, src: usize) {
         // Queen moves as the union of rook and bishop
-        self.generate_rook_moves(moves, i);
-        self.generate_bishop_moves(moves, i);
+        self.generate_rook_moves(moves, src);
+        self.generate_bishop_moves(moves, src);
     }
 
     #[inline(always)]
-    fn generate_bishop_moves(&self, moves: &mut Vec<Board>, i: usize) {
-        self.make_sliding_moves(moves, i, |i| i + UP_RIGHT);
-        self.make_sliding_moves(moves, i, |i| i + UP_LEFT);
-        self.make_sliding_moves(moves, i, |i| {
+    fn generate_bishop_moves(&self, moves: &mut Vec<Board>, src: usize) {
+        self.make_sliding_moves(moves, src, |i| i + UP_RIGHT);
+        self.make_sliding_moves(moves, src, |i| i + UP_LEFT);
+        self.make_sliding_moves(moves, src, |i| {
             // Invert UP_RIGHT becomes DOWN_LEFT
             // If we underflow we're off the bottom, so set to a know fail value
             match i.checked_sub(UP_RIGHT) {
@@ -111,7 +185,7 @@ impl Board {
                 None => 0x88,
             }
         });
-        self.make_sliding_moves(moves, i, |i| {
+        self.make_sliding_moves(moves, src, |i| {
             // Invert UP_LEFT becomes DOWN_RIGHT
             // If we underflow we're off the bottom, so set to a know fail value
             match i.checked_sub(UP_LEFT) {
@@ -122,10 +196,10 @@ impl Board {
     }
 
     #[inline(always)]
-    fn generate_rook_moves(&self, moves: &mut Vec<Board>, i: usize) {
-        self.make_sliding_moves(moves, i, |i| i + RIGHT);
-        self.make_sliding_moves(moves, i, |i| i + UP);
-        self.make_sliding_moves(moves, i, |i| {
+    fn generate_rook_moves(&self, moves: &mut Vec<Board>, src: usize) {
+        self.make_sliding_moves(moves, src, |i| i + RIGHT);
+        self.make_sliding_moves(moves, src, |i| i + UP);
+        self.make_sliding_moves(moves, src, |i| {
             // Invert UP becomes DOWN
             // If we underflow we're off the bottom, so set to a know fail value
             match i.checked_sub(UP) {
@@ -133,7 +207,7 @@ impl Board {
                 None => 0x88,
             }
         });
-        self.make_sliding_moves(moves, i, |i| {
+        self.make_sliding_moves(moves, src, |i| {
             // Invert RIGHT becomes LEFT
             // If we underflow we're off the bottom, so set to a know fail value
             match i.checked_sub(RIGHT) {
@@ -359,5 +433,44 @@ mod tests {
 
         board.generate_knight_moves(&mut moves, 64);
         assert_eq!(4, moves.len());
+    }
+
+    #[test]
+    pub fn pawn_moves_from_start() {
+        let board = Board::new();
+        let mut moves = vec![];
+
+        // A2
+        board.generate_pawn_moves(&mut moves, 17);
+        assert_eq!(1, moves.len());
+        // E2
+        board.generate_pawn_moves(&mut moves, 21);
+        assert_eq!(2, moves.len());
+        // B7
+        board.generate_pawn_moves(&mut moves, 97);
+        assert_eq!(3, moves.len());
+        // G7
+        board.generate_pawn_moves(&mut moves, 102);
+        assert_eq!(4, moves.len());
+    }
+
+    #[test]
+    pub fn pawn_moves_blocked_front() {
+        let mut board = Board::new();
+        let mut moves = vec![];
+
+        // Place pawn on D5
+        board.0[67] = Some(Space {
+            piece: Piece::Knight,
+            side: Side::White,
+        });
+        // Place pawn on D6
+        board.0[83] = Some(Space {
+            piece: Piece::Knight,
+            side: Side::White,
+        });
+
+        board.generate_pawn_moves(&mut moves, 67);
+        assert_eq!(0, moves.len());
     }
 }
