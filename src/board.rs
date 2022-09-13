@@ -4,6 +4,7 @@ const UP_LEFT: usize = 15;
 const UP: usize = 16;
 const UP_RIGHT: usize = 17;
 const RIGHT: usize = 1;
+const KNIGHT_MOVES: [usize; 4] = [14, 18, 31, 33];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Piece {
@@ -68,7 +69,7 @@ impl Board {
                         Piece::King => todo!(),
                         Piece::Queen => self.generate_queen_moves(&mut moves, i),
                         Piece::Rook => self.generate_rook_moves(&mut moves, i),
-                        Piece::Knight => todo!(),
+                        Piece::Knight => self.generate_knight_moves(&mut moves, i),
                         Piece::Bishop => self.generate_bishop_moves(&mut moves, i),
                         Piece::Pawn => todo!(),
                     }
@@ -80,6 +81,17 @@ impl Board {
     }
 
     // Individual peice move functions to ease testing
+    #[inline(always)]
+    fn generate_knight_moves(&self, moves: &mut Vec<Board>, i: usize) {
+        KNIGHT_MOVES.iter().for_each(|offset| {
+            self.make_jump_move(moves, i, i + offset);
+            match i.checked_sub(*offset) {
+                Some(dest) => self.make_jump_move(moves, i, dest),
+                None => {}
+            }
+        })
+    }
+
     #[inline(always)]
     fn generate_queen_moves(&self, moves: &mut Vec<Board>, i: usize) {
         // Queen moves as the union of rook and bishop
@@ -131,26 +143,46 @@ impl Board {
         });
     }
 
-    fn make_sliding_moves(&self, moves: &mut Vec<Board>, i: usize, index_exp: fn(usize) -> usize) {
-        let mut index = i;
+    fn make_sliding_moves(
+        &self,
+        moves: &mut Vec<Board>,
+        src: usize,
+        index_exp: fn(usize) -> usize,
+    ) {
+        let mut dest = src;
         loop {
-            index = index_exp(index);
-            if index & 0x88 == 0 {
-                match self.0[index] {
+            dest = index_exp(dest);
+            if dest & 0x88 == 0 {
+                match self.0[dest] {
                     Some(target) => {
                         if target.side
-                            != self.0[i].expect("sliding move called on empty space").side
+                            != self.0[src]
+                                .expect("sliding move called on empty space")
+                                .side
                         {
-                            moves.push(self.make_move(i, index));
+                            moves.push(self.make_move(src, dest));
                         }
                         break;
                     }
                     None => {
-                        moves.push(self.make_move(i, index));
+                        moves.push(self.make_move(src, dest));
                     }
                 }
             } else {
                 break;
+            }
+        }
+    }
+
+    fn make_jump_move(&self, moves: &mut Vec<Board>, src: usize, dest: usize) {
+        if dest & 0x88 == 0 {
+            match self.0[dest] {
+                Some(target) => {
+                    if target.side != self.0[src].expect("jump move called on empty space").side {
+                        moves.push(self.make_move(src, dest));
+                    }
+                }
+                None => moves.push(self.make_move(src, dest)),
             }
         }
     }
@@ -278,5 +310,54 @@ mod tests {
 
         board.generate_rook_moves(&mut moves, 67);
         assert_eq!(11, moves.len());
+    }
+
+    #[test]
+    pub fn knight_moves_from_start() {
+        let board = Board::new();
+        let mut moves = vec![];
+
+        // B1
+        board.generate_knight_moves(&mut moves, 1);
+        assert_eq!(2, moves.len());
+        // G1
+        board.generate_knight_moves(&mut moves, 6);
+        assert_eq!(4, moves.len());
+        // B8
+        board.generate_knight_moves(&mut moves, 113);
+        assert_eq!(6, moves.len());
+        // G8
+        board.generate_knight_moves(&mut moves, 118);
+        assert_eq!(8, moves.len());
+    }
+
+    #[test]
+    pub fn knight_moves_from_middle() {
+        let mut board = Board::new();
+        let mut moves = vec![];
+
+        // Place rook on D5
+        board.0[67] = Some(Space {
+            piece: Piece::Knight,
+            side: Side::White,
+        });
+
+        board.generate_knight_moves(&mut moves, 67);
+        assert_eq!(8, moves.len());
+    }
+
+    #[test]
+    pub fn knight_moves_from_side() {
+        let mut board = Board::new();
+        let mut moves = vec![];
+
+        // Place rook on D5
+        board.0[64] = Some(Space {
+            piece: Piece::Knight,
+            side: Side::White,
+        });
+
+        board.generate_knight_moves(&mut moves, 64);
+        assert_eq!(4, moves.len());
     }
 }
