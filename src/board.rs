@@ -69,7 +69,7 @@ impl Board {
                         Piece::Queen => todo!(),
                         Piece::Rook => todo!(),
                         Piece::Knight => todo!(),
-                        Piece::Bishop => self.move_bishop(&mut moves, player, i),
+                        Piece::Bishop => self.generate_bishop_moves(&mut moves, i),
                         Piece::Pawn => todo!(),
                     }
                 }
@@ -81,10 +81,10 @@ impl Board {
 
     // Individual peice move functions to ease testing
     #[inline(always)]
-    fn move_bishop(&self, moves: &mut Vec<Board>, player: Side, i: usize) {
-        self.make_sliding_moves(moves, i, player, |i| i + UP_RIGHT);
-        self.make_sliding_moves(moves, i, player, |i| i + UP_LEFT);
-        self.make_sliding_moves(moves, i, player, |i| {
+    fn generate_bishop_moves(&self, moves: &mut Vec<Board>, i: usize) {
+        self.make_sliding_moves(moves, i, |i| i + UP_RIGHT);
+        self.make_sliding_moves(moves, i, |i| i + UP_LEFT);
+        self.make_sliding_moves(moves, i, |i| {
             // Invert UP_RIGHT becomes DOWN_LEFT
             // If we underflow we're off the bottom, so set to a know fail value
             match i.checked_sub(UP_RIGHT) {
@@ -92,7 +92,7 @@ impl Board {
                 None => 0x88,
             }
         });
-        self.make_sliding_moves(moves, i, player, |i| {
+        self.make_sliding_moves(moves, i, |i| {
             // Invert UP_LEFT becomes DOWN_RIGHT
             // If we underflow we're off the bottom, so set to a know fail value
             match i.checked_sub(UP_LEFT) {
@@ -102,20 +102,16 @@ impl Board {
         });
     }
 
-    fn make_sliding_moves(
-        &self,
-        moves: &mut Vec<Board>,
-        i: usize,
-        player: Side,
-        index_exp: fn(usize) -> usize,
-    ) {
+    fn make_sliding_moves(&self, moves: &mut Vec<Board>, i: usize, index_exp: fn(usize) -> usize) {
         let mut index = i;
         loop {
             index = index_exp(index);
-            if index & 0x88 != 0 {
+            if index & 0x88 == 0 {
                 match self.0[index] {
                     Some(target) => {
-                        if target.side != player {
+                        if target.side
+                            != self.0[i].expect("sliding move called on empty space").side
+                        {
                             moves.push(self.make_move(i, index));
                         }
                         break;
@@ -124,6 +120,8 @@ impl Board {
                         moves.push(self.make_move(i, index));
                     }
                 }
+            } else {
+                break;
             }
         }
     }
@@ -141,4 +139,24 @@ impl Board {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    pub fn bishop_moves_from_start() {
+        let board = Board::new();
+        let mut moves = vec![];
+
+        // C1
+        board.generate_bishop_moves(&mut moves, 2);
+        assert_eq!(0, moves.len());
+        // F1
+        board.generate_bishop_moves(&mut moves, 5);
+        assert_eq!(0, moves.len());
+        // C8
+        board.generate_bishop_moves(&mut moves, 114);
+        assert_eq!(0, moves.len());
+        // F8
+        board.generate_bishop_moves(&mut moves, 117);
+        assert_eq!(0, moves.len());
+        assert_eq!(Piece::Bishop, board.0[117].unwrap().piece);
+    }
 }
