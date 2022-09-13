@@ -1,3 +1,10 @@
+// Directional movement offsets using 0x88 board representation
+// Missing directions are inverts of these (So we subtract)
+const UP_LEFT: usize = 15;
+const UP: usize = 16;
+const UP_RIGHT: usize = 17;
+const RIGHT: usize = 1;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Piece {
     King,
@@ -47,7 +54,7 @@ impl Board {
             // Rank 8 
             Some(Space { piece: Piece::Rook, side: Side::Black }), Some(Space { piece: Piece::Knight, side: Side::Black }), Some(Space { piece: Piece::Bishop, side: Side::Black }),
             Some(Space { piece: Piece::Queen, side: Side::Black }), Some(Space { piece: Piece::King, side: Side::Black }), Some(Space { piece: Piece::Bishop, side: Side::Black }),
-            Some(Space { piece: Piece::Knight, side: Side::Black }), Some(Space { piece: Piece::Rook, side: Side::Black }), None, None, None, None, None, None, None, None,    
+            Some(Space { piece: Piece::Knight, side: Side::Black }), Some(Space { piece: Piece::Rook, side: Side::Black }), None, None, None, None, None, None, None, None,
         ])
     }
 
@@ -62,32 +69,63 @@ impl Board {
                         Piece::Queen => todo!(),
                         Piece::Rook => todo!(),
                         Piece::Knight => todo!(),
-                        Piece::Bishop => {
-                            let mut index = i;
-                            loop {
-                                index += 17;
-                                if index & 0x88 != 0 {
-                                    match self.0[index] {
-                                        Some(target) => {
-                                            if target.side != player {
-                                                moves.push(self.make_move(i, index));
-                                            }
-                                            break;
-                                        },
-                                        None => {
-                                            moves.push(self.make_move(i, index));
-                                        },
-                                    }
-                                }
-                            }
-                        },
+                        Piece::Bishop => self.move_bishop(&mut moves, player, i),
                         Piece::Pawn => todo!(),
                     }
-                }                
+                }
             }
         }
 
         moves
+    }
+
+    // Individual peice move functions to ease testing
+    #[inline(always)]
+    fn move_bishop(&self, moves: &mut Vec<Board>, player: Side, i: usize) {
+        self.make_sliding_moves(moves, i, player, |i| i + UP_RIGHT);
+        self.make_sliding_moves(moves, i, player, |i| i + UP_LEFT);
+        self.make_sliding_moves(moves, i, player, |i| {
+            // Invert UP_RIGHT becomes DOWN_LEFT
+            // If we underflow we're off the bottom, so set to a know fail value
+            match i.checked_sub(UP_RIGHT) {
+                Some(i) => i,
+                None => 0x88,
+            }
+        });
+        self.make_sliding_moves(moves, i, player, |i| {
+            // Invert UP_LEFT becomes DOWN_RIGHT
+            // If we underflow we're off the bottom, so set to a know fail value
+            match i.checked_sub(UP_LEFT) {
+                Some(i) => i,
+                None => 0x88,
+            }
+        });
+    }
+
+    fn make_sliding_moves(
+        &self,
+        moves: &mut Vec<Board>,
+        i: usize,
+        player: Side,
+        index_exp: fn(usize) -> usize,
+    ) {
+        let mut index = i;
+        loop {
+            index = index_exp(index);
+            if index & 0x88 != 0 {
+                match self.0[index] {
+                    Some(target) => {
+                        if target.side != player {
+                            moves.push(self.make_move(i, index));
+                        }
+                        break;
+                    }
+                    None => {
+                        moves.push(self.make_move(i, index));
+                    }
+                }
+            }
+        }
     }
 
     #[inline(always)]
