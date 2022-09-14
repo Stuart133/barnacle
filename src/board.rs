@@ -95,6 +95,14 @@ impl Board {
                         moves.push(self.make_move(src, dest));
                     }
                 }
+                // If we're on the starting space, generate the two space move
+                // We can omit the off board test as this can't be off board
+                if src <= 0x17 && src >= 0x10 {
+                    let dest = src + UP + UP;
+                    if let None = self.0[dest] {
+                        moves.push(self.make_move(src, dest));
+                    }
+                }
                 let dest = src + UP_RIGHT;
                 if dest & 0x88 == 0 {
                     if let Some(Space {
@@ -124,6 +132,14 @@ impl Board {
                         }
                     }
                     None => {}
+                }
+                // If we're on the starting space, generate the two space move
+                // We can omit the off board test & checked sub as this can't be off board
+                if src <= 0x67 && src >= 0x60 {
+                    let dest = src - UP - UP;
+                    if let None = self.0[dest] {
+                        moves.push(self.make_move(src, dest));
+                    }
                 }
                 match src.checked_sub(UP_RIGHT) {
                     Some(dest) => {
@@ -442,35 +458,93 @@ mod tests {
 
         // A2
         board.generate_pawn_moves(&mut moves, 17);
-        assert_eq!(1, moves.len());
+        assert_eq!(2, moves.len());
         // E2
         board.generate_pawn_moves(&mut moves, 21);
-        assert_eq!(2, moves.len());
+        assert_eq!(4, moves.len());
         // B7
         board.generate_pawn_moves(&mut moves, 97);
-        assert_eq!(3, moves.len());
+        assert_eq!(6, moves.len());
         // G7
         board.generate_pawn_moves(&mut moves, 102);
+        assert_eq!(8, moves.len());
+    }
+
+    #[test]
+    pub fn pawn_move_from_center() {
+        let mut board = Board::new();
+        let mut moves = vec![];
+
+        // Place pawn on D4
+        board.0[0x33] = Some(Space {
+            piece: Piece::Pawn,
+            side: Side::White,
+        });
+        // Place pawn on C5
+        board.0[0x42] = Some(Space {
+            piece: Piece::Pawn,
+            side: Side::Black,
+        });
+
+        board.generate_pawn_moves(&mut moves, 0x33);
+        assert_eq!(2, moves.len());
+
+        board.generate_pawn_moves(&mut moves, 0x42);
         assert_eq!(4, moves.len());
     }
 
     #[test]
-    pub fn pawn_moves_blocked_front() {
+    pub fn pawn_moves_blocked_friendly_front() {
         let mut board = Board::new();
         let mut moves = vec![];
 
         // Place pawn on D5
         board.0[67] = Some(Space {
-            piece: Piece::Knight,
+            piece: Piece::Pawn,
             side: Side::White,
         });
         // Place pawn on D6
         board.0[83] = Some(Space {
-            piece: Piece::Knight,
+            piece: Piece::Pawn,
             side: Side::White,
         });
 
         board.generate_pawn_moves(&mut moves, 67);
         assert_eq!(0, moves.len());
+    }
+
+    #[test]
+    pub fn pawn_moves_blocked_enemy_front() {
+        let mut board = Board::new();
+        let mut moves = vec![];
+
+        // Place pawn on D5
+        board.0[67] = Some(Space {
+            piece: Piece::Pawn,
+            side: Side::White,
+        });
+        // Place pawn on D6
+        board.0[83] = Some(Space {
+            piece: Piece::Pawn,
+            side: Side::Black,
+        });
+
+        board.generate_pawn_moves(&mut moves, 67);
+        assert_eq!(0, moves.len());
+    }
+
+    #[test]
+    pub fn pawn_moves_capture_front() {
+        let mut board = Board::new();
+        let mut moves = vec![];
+
+        // Place pawn on D6
+        board.0[0x53] = Some(Space {
+            piece: Piece::Pawn,
+            side: Side::White,
+        });
+
+        board.generate_pawn_moves(&mut moves, 0x53);
+        assert_eq!(2, moves.len());
     }
 }
