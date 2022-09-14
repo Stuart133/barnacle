@@ -80,6 +80,37 @@ impl Board {
         moves
     }
 
+    // Is the king is check in this position?
+    fn king_check(&self, side: Side, position: usize) -> bool {
+        // Check knight attacks
+        KNIGHT_MOVES.iter().fold(false, |val, offset| {
+            if let Some(Space {
+                piece: Piece::King,
+                side: attack_side,
+            }) = self.0[position + offset]
+            {
+                if side != attack_side {
+                    return true;
+                }
+            }
+            if let Some(attack) = position.checked_sub(*offset) {
+                if let Some(Space {
+                    piece: Piece::King,
+                    side: attack_side,
+                }) = self.0[attack]
+                {
+                    if side != attack_side {
+                        return true;
+                    }
+                }
+            }
+
+            false || val
+        });
+
+        false
+    }
+
     // Individual peice move functions to ease testing
     #[inline(always)]
     fn generate_king_moves(&self, moves: &mut Vec<Board>, src: usize) {
