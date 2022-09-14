@@ -13,7 +13,7 @@ pub enum Piece {
     Rook,
     Knight,
     Bishop,
-    Pawn,
+    Pawn(bool), // Store the en passent status of the pawn
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -40,18 +40,18 @@ impl Board {
             Some(Space { piece: Piece::Queen, side: Side::White }), Some(Space { piece: Piece::King, side: Side::White }), Some(Space { piece: Piece::Bishop, side: Side::White }),
             Some(Space { piece: Piece::Knight, side: Side::White }), Some(Space { piece: Piece::Rook, side: Side::White }), None, None, None, None, None, None, None, None,
             // Rank 2
-            Some(Space { piece: Piece::Pawn, side: Side::White }), Some(Space { piece: Piece::Pawn, side: Side::White }), Some(Space { piece: Piece::Pawn, side: Side::White }),
-            Some(Space { piece: Piece::Pawn, side: Side::White }), Some(Space { piece: Piece::Pawn, side: Side::White }), Some(Space { piece: Piece::Pawn, side: Side::White }),
-            Some(Space { piece: Piece::Pawn, side: Side::White }), Some(Space { piece: Piece::Pawn, side: Side::White }), None, None, None, None, None, None, None, None,
+            Some(Space { piece: Piece::Pawn(false), side: Side::White }), Some(Space { piece: Piece::Pawn(false), side: Side::White }), Some(Space { piece: Piece::Pawn(false), side: Side::White }),
+            Some(Space { piece: Piece::Pawn(false), side: Side::White }), Some(Space { piece: Piece::Pawn(false), side: Side::White }), Some(Space { piece: Piece::Pawn(false), side: Side::White }),
+            Some(Space { piece: Piece::Pawn(false), side: Side::White }), Some(Space { piece: Piece::Pawn(false), side: Side::White }), None, None, None, None, None, None, None, None,
             // Rank 3 - 6
             None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
             None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
             None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
             None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
             // Rank 7
-            Some(Space { piece: Piece::Pawn, side: Side::Black }), Some(Space { piece: Piece::Pawn, side: Side::Black }), Some(Space { piece: Piece::Pawn, side: Side::Black }),
-            Some(Space { piece: Piece::Pawn, side: Side::Black }), Some(Space { piece: Piece::Pawn, side: Side::Black }), Some(Space { piece: Piece::Pawn, side: Side::Black }),
-            Some(Space { piece: Piece::Pawn, side: Side::Black }), Some(Space { piece: Piece::Pawn, side: Side::Black }), None, None, None, None, None, None, None, None,
+            Some(Space { piece: Piece::Pawn(false), side: Side::Black }), Some(Space { piece: Piece::Pawn(false), side: Side::Black }), Some(Space { piece: Piece::Pawn(false), side: Side::Black }),
+            Some(Space { piece: Piece::Pawn(false), side: Side::Black }), Some(Space { piece: Piece::Pawn(false), side: Side::Black }), Some(Space { piece: Piece::Pawn(false), side: Side::Black }),
+            Some(Space { piece: Piece::Pawn(false), side: Side::Black }), Some(Space { piece: Piece::Pawn(false), side: Side::Black }), None, None, None, None, None, None, None, None,
             // Rank 8 
             Some(Space { piece: Piece::Rook, side: Side::Black }), Some(Space { piece: Piece::Knight, side: Side::Black }), Some(Space { piece: Piece::Bishop, side: Side::Black }),
             Some(Space { piece: Piece::Queen, side: Side::Black }), Some(Space { piece: Piece::King, side: Side::Black }), Some(Space { piece: Piece::Bishop, side: Side::Black }),
@@ -66,12 +66,12 @@ impl Board {
             if let Some(space) = space {
                 if space.side == player {
                     match space.piece {
-                        Piece::King => {}
+                        Piece::King => self.generate_king_moves(&mut moves, i),
                         Piece::Queen => self.generate_queen_moves(&mut moves, i),
                         Piece::Rook => self.generate_rook_moves(&mut moves, i),
                         Piece::Knight => self.generate_knight_moves(&mut moves, i),
                         Piece::Bishop => self.generate_bishop_moves(&mut moves, i),
-                        Piece::Pawn => self.generate_pawn_moves(&mut moves, i),
+                        Piece::Pawn(_) => self.generate_pawn_moves(&mut moves, i),
                     }
                 }
             }
@@ -81,6 +81,17 @@ impl Board {
     }
 
     // Individual peice move functions to ease testing
+    #[inline(always)]
+    fn generate_king_moves(&self, moves: &mut Vec<Board>, src: usize) {
+        [UP_RIGHT, UP, UP_LEFT, RIGHT].iter().for_each(|offset| {
+            self.make_jump_move(moves, src, src + offset);
+            match src.checked_sub(*offset) {
+                Some(dest) => self.make_jump_move(moves, src, dest),
+                None => {}
+            }
+        })
+    }
+
     #[inline(always)]
     fn generate_pawn_moves(&self, moves: &mut Vec<Board>, src: usize) {
         // TODO: En passent
@@ -295,7 +306,7 @@ mod tests {
     // This is the master correctness test, if it's wrong then the move generator is not working correctly
     // See https://www.chessprogramming.org/Perft for more details
     pub fn perft() {
-        let correct_values = [20, 400, 8902];
+        let correct_values = [20, 400, 8902, 197281];
 
         let board = Board::new();
         let mut side = Side::White;
@@ -318,15 +329,48 @@ mod tests {
     }
 
     #[test]
+    pub fn king_moves_from_start() {
+        let board = Board::new();
+        let mut moves = vec![];
+
+        // E1
+        board.generate_king_moves(&mut moves, 4);
+        assert_eq!(0, moves.len());
+        // E8
+        board.generate_king_moves(&mut moves, 0x74);
+        assert_eq!(0, moves.len());
+    }
+
+    #[test]
+    pub fn king_moves_from_middle() {
+        let mut board = Board::new();
+        let mut moves = vec![];
+
+        // Place king on D5
+        board.0[67] = Some(Space {
+            piece: Piece::King,
+            side: Side::White,
+        });
+        // Place pawn on E5
+        board.0[0x43] = Some(Space {
+            piece: Piece::Bishop,
+            side: Side::Black,
+        });
+
+        board.generate_king_moves(&mut moves, 67);
+        assert_eq!(8, moves.len());
+    }
+
+    #[test]
     pub fn queen_moves_from_start() {
         let board = Board::new();
         let mut moves = vec![];
 
         // D1
-        board.generate_queen_moves(&mut moves, 2);
+        board.generate_queen_moves(&mut moves, 3);
         assert_eq!(0, moves.len());
         // D8
-        board.generate_queen_moves(&mut moves, 114);
+        board.generate_queen_moves(&mut moves, 0x73);
         assert_eq!(0, moves.len());
     }
 
@@ -335,7 +379,7 @@ mod tests {
         let mut board = Board::new();
         let mut moves = vec![];
 
-        // Place bishop on D5
+        // Place queen on D5
         board.0[67] = Some(Space {
             piece: Piece::Queen,
             side: Side::White,
@@ -503,12 +547,12 @@ mod tests {
 
         // Place pawn on D4
         board.0[0x33] = Some(Space {
-            piece: Piece::Pawn,
+            piece: Piece::Pawn(false),
             side: Side::White,
         });
         // Place pawn on C5
         board.0[0x42] = Some(Space {
-            piece: Piece::Pawn,
+            piece: Piece::Pawn(false),
             side: Side::Black,
         });
 
@@ -526,12 +570,12 @@ mod tests {
 
         // Place pawn on D5
         board.0[67] = Some(Space {
-            piece: Piece::Pawn,
+            piece: Piece::Pawn(false),
             side: Side::White,
         });
         // Place pawn on D6
         board.0[83] = Some(Space {
-            piece: Piece::Pawn,
+            piece: Piece::Pawn(false),
             side: Side::White,
         });
 
@@ -546,12 +590,12 @@ mod tests {
 
         // Place pawn on D5
         board.0[67] = Some(Space {
-            piece: Piece::Pawn,
+            piece: Piece::Pawn(false),
             side: Side::White,
         });
         // Place pawn on D6
         board.0[83] = Some(Space {
-            piece: Piece::Pawn,
+            piece: Piece::Pawn(false),
             side: Side::Black,
         });
 
@@ -566,7 +610,7 @@ mod tests {
 
         // Place pawn on D6
         board.0[0x53] = Some(Space {
-            piece: Piece::Pawn,
+            piece: Piece::Pawn(false),
             side: Side::White,
         });
 
