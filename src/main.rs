@@ -13,5 +13,5 @@ mod board;
 fn main() {
     let board = Board::new();
 
-    board.generate_moves(Side::White);
+    board.generate_ply(Side::White);
 }

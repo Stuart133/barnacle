@@ -59,14 +59,14 @@ impl Board {
         ])
     }
 
-    pub fn generate_moves(&self, player: Side) -> Vec<Board> {
+    pub fn generate_ply(&self, player: Side) -> Vec<Board> {
         let mut moves = vec![];
 
         for (i, space) in self.0.iter().enumerate() {
             if let Some(space) = space {
                 if space.side == player {
                     match space.piece {
-                        Piece::King => todo!(),
+                        Piece::King => {}
                         Piece::Queen => self.generate_queen_moves(&mut moves, i),
                         Piece::Rook => self.generate_rook_moves(&mut moves, i),
                         Piece::Knight => self.generate_knight_moves(&mut moves, i),
@@ -290,6 +290,32 @@ impl Board {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    // This is the master correctness test, if it's wrong then the move generator is not working correctly
+    // See https://www.chessprogramming.org/Perft for more details
+    pub fn perft() {
+        let correct_values = [20, 400, 8902];
+
+        let board = Board::new();
+        let mut side = Side::White;
+        let mut moves = vec![board];
+
+        for value in correct_values {
+            let mut new_moves = vec![];
+            for m in moves.iter() {
+                new_moves.append(&mut m.generate_ply(side));
+            }
+
+            assert_eq!(value, new_moves.len());
+            moves = new_moves;
+            if side == Side::White {
+                side = Side::Black;
+            } else {
+                side = Side::White;
+            }
+        }
+    }
 
     #[test]
     pub fn queen_moves_from_start() {
