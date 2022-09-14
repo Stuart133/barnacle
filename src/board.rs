@@ -100,6 +100,34 @@ impl Board {
             .fold(false, |val, offset| {
                 self.king_check_inner(side, position, Piece::Queen, val, offset)
             });
+        // Check pawn attacks
+        [UP_LEFT, UP_RIGHT].iter().fold(false, |val, offset| {
+            // Detect white attacking pawns - which attack upwards
+            if side == Side::Black {
+                if let Some(Space {
+                    piece: Piece::Pawn(_),
+                    side: Side::White,
+                }) = self.0[position + offset]
+                {
+                    return true;
+                };
+
+                false && val
+                // Detect black attacking pawns - which attack downward
+            } else {
+                if let Some(attack) = position.checked_sub(*offset) {
+                    if let Some(Space {
+                        piece: Piece::Pawn(_),
+                        side: Side::Black,
+                    }) = self.0[attack]
+                    {
+                        return true;
+                    }
+                }
+
+                false && val
+            }
+        });
 
         false
     }
@@ -323,17 +351,33 @@ impl Board {
         }
     }
 
-    fn make_jump_move(&self, moves: &mut Vec<Board>, src: usize, dest: usize) {
+    fn make_checked_jump(
+        &self,
+        moves: &mut Vec<Board>,
+        src: usize,
+        dest: usize,
+        check: fn(side: Side, position: usize) -> bool,
+    ) {
         if dest & 0x88 == 0 {
+            if check(
+                self.0[src].expect("jump move called on empty space").side,
+                src,
+            ) {
+                return;
+            }
             match self.0[dest] {
                 Some(target) => {
-                    if target.side != self.0[src].expect("jump move called on empty space").side {
+                    if target.side != self.0[src].unwrap().side {
                         moves.push(self.make_move(src, dest));
                     }
                 }
                 None => moves.push(self.make_move(src, dest)),
             }
         }
+    }
+
+    fn make_jump_move(&self, moves: &mut Vec<Board>, src: usize, dest: usize) {
+        self.make_checked_jump(moves, src, dest, |_, _| false)
     }
 
     #[inline(always)]
