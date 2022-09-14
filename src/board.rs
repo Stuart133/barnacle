@@ -84,31 +84,48 @@ impl Board {
     fn king_check(&self, side: Side, position: usize) -> bool {
         // Check knight attacks
         KNIGHT_MOVES.iter().fold(false, |val, offset| {
-            if let Some(Space {
-                piece: Piece::King,
-                side: attack_side,
-            }) = self.0[position + offset]
-            {
-                if side != attack_side {
+            self.king_check_inner(side, position, Piece::Knight, val, offset)
+        });
+        // Check rook attacks
+        [UP, RIGHT].iter().fold(false, |val, offset| {
+            self.king_check_inner(side, position, Piece::Rook, val, offset)
+        });
+        // Check bishop attacks
+        [UP_LEFT, UP_RIGHT].iter().fold(false, |val, offset| {
+            self.king_check_inner(side, position, Piece::Bishop, val, offset)
+        });
+        // Check queen attacks
+        [UP, RIGHT, UP_LEFT, UP_RIGHT]
+            .iter()
+            .fold(false, |val, offset| {
+                self.king_check_inner(side, position, Piece::Queen, val, offset)
+            });
+
+        false
+    }
+
+    fn king_check_inner(
+        &self,
+        side: Side,
+        position: usize,
+        attack_piece: Piece,
+        val: bool,
+        offset: &usize,
+    ) -> bool {
+        if let Some(space) = self.0[position + offset] {
+            if space.side != side && space.piece == attack_piece {
+                return true;
+            }
+        }
+        if let Some(attack) = position.checked_sub(*offset) {
+            if let Some(space) = self.0[attack] {
+                if space.side != side && space.piece == attack_piece {
                     return true;
                 }
             }
-            if let Some(attack) = position.checked_sub(*offset) {
-                if let Some(Space {
-                    piece: Piece::King,
-                    side: attack_side,
-                }) = self.0[attack]
-                {
-                    if side != attack_side {
-                        return true;
-                    }
-                }
-            }
+        }
 
-            false || val
-        });
-
-        false
+        false || val
     }
 
     // Individual peice move functions to ease testing
