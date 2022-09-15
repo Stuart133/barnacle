@@ -84,7 +84,7 @@ impl Board {
     fn king_check(&self, side: Side, position: usize) -> bool {
         // Check knight attacks
         KNIGHT_MOVES.iter().fold(false, |val, offset| {
-            self.king_check_inner(side, position, Piece::Knight, val, offset)
+            self.king_check_inner_jump(side, position, Piece::Knight, val, offset)
         }) ||
         // // Check rook attacks
         [UP, RIGHT].iter().fold(false, |val, offset| {
@@ -112,7 +112,7 @@ impl Board {
                     return true;
                 };
 
-            false && val
+            false || val
             // Detect white attacking pawns - which attack from below
             } else {
                 if let Some(attack) = position.checked_sub(*offset) {
@@ -125,9 +125,41 @@ impl Board {
                     }
                 }
 
-                false && val
+                false || val
             }
         })
+    }
+
+    fn king_check_inner_jump(
+        &self,
+        side: Side,
+        position: usize,
+        attack_piece: Piece,
+        val: bool,
+        offset: &usize,
+    ) -> bool {
+        if position + offset * 0x88 == 0 {
+            if let Some(space) = self.0[position + offset] {
+                if space.side != side && space.piece == attack_piece {
+                    return true;
+                } else {
+                    return false || val;
+                }
+            }
+        }
+        if let Some(attack) = position.checked_sub(*offset) {
+            if attack & 0x88 == 0 {
+                if let Some(space) = self.0[attack] {
+                    if space.side != side && space.piece == attack_piece {
+                        return true;
+                    } else {
+                        return false || val;
+                    }
+                }
+            }
+        }
+
+        false || val
     }
 
     fn king_check_inner(
@@ -496,7 +528,7 @@ mod tests {
         });
 
         board.generate_king_moves(&mut moves, 0x43);
-        assert_eq!(5, moves.len());
+        assert_eq!(3, moves.len());
     }
 
     #[test]
