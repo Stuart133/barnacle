@@ -94,26 +94,26 @@ impl Board {
         [UP_LEFT, UP_RIGHT].iter().fold(false, |val, offset| {
             self.king_check_inner(side, position, Piece::Bishop, val, offset)
         }) ||
-           // Check queen attacks
-           [UP, RIGHT, UP_LEFT, UP_RIGHT]
-               .iter()
-               .fold(false, |val, offset| {
-                   self.king_check_inner(side, position, Piece::Queen, val, offset)
-               }) ||
-           // Check pawn attacks
-           [UP_LEFT, UP_RIGHT].iter().fold(false, |val, offset| {
-               // Detect black attacking pawns - which from above
-               if side == Side::White && (position + offset) & 0x88 == 0 {
-                   if let Some(Space {
-                       piece: Piece::Pawn(_),
-                       side: Side::Black,
-                   }) = self.0[position + offset]
-                   {
-                       return true;
-                   };
+        // Check queen attacks
+        [UP, RIGHT, UP_LEFT, UP_RIGHT]
+            .iter()
+            .fold(false, |val, offset| {
+                self.king_check_inner(side, position, Piece::Queen, val, offset)
+            }) ||
+        // Check pawn attacks
+        [UP_LEFT, UP_RIGHT].iter().fold(false, |val, offset| {
+            // Detect black attacking pawns - which from above
+            if side == Side::White && (position + offset) & 0x88 == 0 {
+                if let Some(Space {
+                    piece: Piece::Pawn(_),
+                    side: Side::Black,
+                }) = self.0[position + offset]
+                {
+                    return true;
+                };
 
-                false && val
-                // Detect white attacking pawns - which attack from below
+            false && val
+            // Detect white attacking pawns - which attack from below
             } else {
                 if let Some(attack) = position.checked_sub(*offset) {
                     if let Some(Space {
@@ -145,6 +145,8 @@ impl Board {
                 if let Some(space) = self.0[attack] {
                     if space.side != side && space.piece == attack_piece {
                         return true;
+                    } else {
+                        return false || val;
                     }
                 }
             } else {
@@ -162,6 +164,8 @@ impl Board {
                 if let Some(space) = self.0[attack] {
                     if space.side != side && space.piece == attack_piece {
                         return true;
+                    } else {
+                        return false || val;
                     }
                 }
             } else {
@@ -178,7 +182,7 @@ impl Board {
         [UP_RIGHT, UP, UP_LEFT, RIGHT].iter().for_each(|offset| {
             self.make_checked_jump(moves, src, src + offset, Board::king_check);
             match src.checked_sub(*offset) {
-                Some(dest) => self.make_jump_move(moves, src, dest),
+                Some(dest) => self.make_checked_jump(moves, src, dest, Board::king_check),
                 None => {}
             }
         })
@@ -378,7 +382,7 @@ impl Board {
             if check(
                 self,
                 self.0[src].expect("jump move called on empty space").side,
-                src,
+                dest,
             ) {
                 return;
             }
@@ -456,18 +460,43 @@ mod tests {
         let mut moves = vec![];
 
         // Place king on D5
-        board.0[67] = Some(Space {
+        board.0[0x43] = Some(Space {
             piece: Piece::King,
             side: Side::White,
         });
         // Place pawn on E5
+        board.0[0x44] = Some(Space {
+            piece: Piece::Pawn(false),
+            side: Side::Black,
+        });
+
+        board.generate_king_moves(&mut moves, 0x4367);
+        assert_eq!(8, moves.len());
+    }
+
+    #[test]
+    pub fn king_moves_with_potential_check() {
+        let mut board = Board::new();
+        let mut moves = vec![];
+
+        // Place king on D5
         board.0[0x43] = Some(Space {
+            piece: Piece::King,
+            side: Side::White,
+        });
+        // Place pawn on C5
+        board.0[0x42] = Some(Space {
+            piece: Piece::Pawn(false),
+            side: Side::Black,
+        });
+        // Place bishop on C7
+        board.0[0x62] = Some(Space {
             piece: Piece::Bishop,
             side: Side::Black,
         });
 
-        board.generate_king_moves(&mut moves, 67);
-        assert_eq!(8, moves.len());
+        board.generate_king_moves(&mut moves, 0x43);
+        assert_eq!(5, moves.len());
     }
 
     #[test]
@@ -750,6 +779,25 @@ mod tests {
         // Bishop on B6
         board.0[0x51] = Some(Space {
             piece: Piece::Bishop,
+            side: Side::Black,
+        });
+
+        // E8
+        assert!(board.king_check(Side::White, 0x33));
+    }
+
+    #[test]
+    pub fn king_in_check_from_pawn() {
+        let mut board = Board::new();
+
+        // King at D4
+        board.0[0x33] = Some(Space {
+            piece: Piece::King,
+            side: Side::White,
+        });
+        // Pawn on C5
+        board.0[0x42] = Some(Space {
+            piece: Piece::Pawn(false),
             side: Side::Black,
         });
 
