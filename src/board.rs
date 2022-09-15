@@ -30,7 +30,8 @@ pub struct Space {
 
 #[derive(Clone, Debug)]
 pub struct Game {
-    board: [Option<Space>; 128],
+    board: [Option<Space>; 128], // TODO: Look into bijective map to replace this
+    white: [usize; 16],
     white_check: bool,
     black_check: bool,
 }
@@ -60,7 +61,7 @@ impl Game {
             Some(Space { piece: Piece::Rook, side: Side::Black }), Some(Space { piece: Piece::Knight, side: Side::Black }), Some(Space { piece: Piece::Bishop, side: Side::Black }),
             Some(Space { piece: Piece::Queen, side: Side::Black }), Some(Space { piece: Piece::King, side: Side::Black }), Some(Space { piece: Piece::Bishop, side: Side::Black }),
             Some(Space { piece: Piece::Knight, side: Side::Black }), Some(Space { piece: Piece::Rook, side: Side::Black }), None, None, None, None, None, None, None, None,
-        ], white_check: false, black_check: false}
+        ], white_check: false, black_check: false, white: [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17]}
     }
 
     pub fn generate_ply(&self, player: Side) -> Vec<Game> {
@@ -69,13 +70,20 @@ impl Game {
         for (i, space) in self.board.iter().enumerate() {
             if let Some(space) = space {
                 if space.side == player {
-                    match space.piece {
-                        Piece::King => self.generate_king_moves(&mut moves, i),
-                        Piece::Queen => self.generate_queen_moves(&mut moves, i),
-                        Piece::Rook => self.generate_rook_moves(&mut moves, i),
-                        Piece::Knight => self.generate_knight_moves(&mut moves, i),
-                        Piece::Bishop => self.generate_bishop_moves(&mut moves, i),
-                        Piece::Pawn(_) => self.generate_pawn_moves(&mut moves, i),
+                    if space.side == Side::White && self.white_check || space.side == Side::Black && self.black_check {
+                        if let Piece::King = space.piece {
+                            println!("CHECK");
+                            self.generate_king_moves(&mut moves, i);
+                        }
+                    } else {
+                        match space.piece {
+                            Piece::King => self.generate_king_moves(&mut moves, i),
+                            Piece::Queen => self.generate_queen_moves(&mut moves, i),
+                            Piece::Rook => self.generate_rook_moves(&mut moves, i),
+                            Piece::Knight => self.generate_knight_moves(&mut moves, i),
+                            Piece::Bishop => self.generate_bishop_moves(&mut moves, i),
+                            Piece::Pawn(_) => self.generate_pawn_moves(&mut moves, i),
+                        }    
                     }
                 }
             }
@@ -468,12 +476,6 @@ mod tests {
                 new_moves.append(&mut m.generate_ply(side));
             }
 
-            // let t = new_moves.iter().filter(|&b| {
-            //     b.board.iter().filter(|&s| {
-            //         *s != None
-            //     }).count() == 31
-            // }).count();
-            // println!("{}", t);
             assert_eq!(value, new_moves.len());
             moves = new_moves;
             if side == Side::White {
