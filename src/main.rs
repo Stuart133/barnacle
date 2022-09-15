@@ -19,3 +19,6 @@ fn main() {
 
     println!("{}", size_of::<Game>());
 }
+
+// 256 bytes for a simple repr
+// 300 bytes is the copy limit perhaps?

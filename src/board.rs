@@ -6,6 +6,40 @@ const UP_RIGHT: usize = 17;
 const RIGHT: usize = 1;
 const KNIGHT_MOVES: [usize; 4] = [14, 18, 31, 33];
 
+// Piece list index values
+const WHITE_QUEEN_ROOK: usize = 0;
+const WHITE_QUEEN_KNIGHT: usize = 1;
+const WHITE_QUEEN_BISHOP: usize = 2;
+const WHITE_QUEEN: usize = 3;
+const WHITE_KING: usize = 4;
+const WHITE_KING_BISHOP: usize = 5;
+const WHITE_KING_KNIGHT: usize = 6;
+const WHITE_KING_ROOK: usize = 7;
+const WHITE_PAWN_A: usize = 8;
+const WHITE_PAWN_B: usize = 9;
+const WHITE_PAWN_C: usize = 10;
+const WHITE_PAWN_D: usize = 11;
+const WHITE_PAWN_E: usize = 12;
+const WHITE_PAWN_F: usize = 13;
+const WHITE_PAWN_G: usize = 14;
+const WHITE_PAWN_H: usize = 15;
+const BLACK_QUEEN_ROOK: usize = 16;
+const BLACK_QUEEN_KNIGHT: usize = 17;
+const BLACK_QUEEN_BISHOP: usize = 18;
+const BLACK_QUEEN: usize = 19;
+const BLACK_KING: usize = 20;
+const BLACK_KING_BISHOP: usize = 21;
+const BLACK_KING_KNIGHT: usize = 22;
+const BLACK_KING_ROOK: usize = 23;
+const BLACK_PAWN_A: usize = 24;
+const BLACK_PAWN_B: usize = 25;
+const BLACK_PAWN_C: usize = 26;
+const BLACK_PAWN_D: usize = 27;
+const BLACK_PAWN_E: usize = 28;
+const BLACK_PAWN_F: usize = 29;
+const BLACK_PAWN_G: usize = 30;
+const BLACK_PAWN_H: usize = 31;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Piece {
     King,
@@ -31,7 +65,7 @@ pub struct Space {
 #[derive(Clone, Debug)]
 pub struct Game {
     board: [Option<Space>; 128], // TODO: Look into bijective map to replace this
-    white: [usize; 16],
+    pieces: [usize; 32],
     white_check: bool,
     black_check: bool,
 }
@@ -61,33 +95,50 @@ impl Game {
             Some(Space { piece: Piece::Rook, side: Side::Black }), Some(Space { piece: Piece::Knight, side: Side::Black }), Some(Space { piece: Piece::Bishop, side: Side::Black }),
             Some(Space { piece: Piece::Queen, side: Side::Black }), Some(Space { piece: Piece::King, side: Side::Black }), Some(Space { piece: Piece::Bishop, side: Side::Black }),
             Some(Space { piece: Piece::Knight, side: Side::Black }), Some(Space { piece: Piece::Rook, side: Side::Black }), None, None, None, None, None, None, None, None,
-        ], white_check: false, black_check: false, white: [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17]}
+        ], white_check: false, black_check: false, 
+        pieces: [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67]}
     }
 
     pub fn generate_ply(&self, player: Side) -> Vec<Game> {
         let mut moves = vec![];
 
-        for (i, space) in self.board.iter().enumerate() {
-            if let Some(space) = space {
-                if space.side == player {
-                    if space.side == Side::White && self.white_check || space.side == Side::Black && self.black_check {
-                        if let Piece::King = space.piece {
-                            println!("CHECK");
-                            self.generate_king_moves(&mut moves, i);
-                        }
-                    } else {
-                        match space.piece {
-                            Piece::King => self.generate_king_moves(&mut moves, i),
-                            Piece::Queen => self.generate_queen_moves(&mut moves, i),
-                            Piece::Rook => self.generate_rook_moves(&mut moves, i),
-                            Piece::Knight => self.generate_knight_moves(&mut moves, i),
-                            Piece::Bishop => self.generate_bishop_moves(&mut moves, i),
-                            Piece::Pawn(_) => self.generate_pawn_moves(&mut moves, i),
-                        }    
-                    }
-                }
+        let range = if player == Side::White { 0..16 } else { 16..32 };
+
+        for (i, piece) in self.pieces[range].iter().enumerate() {
+            match self.board[*piece]
+                .expect("piece index set to empty space")
+                .piece
+            {
+                Piece::King => self.generate_king_moves(&mut moves, *piece, i),
+                Piece::Queen => self.generate_queen_moves(&mut moves, *piece, i),
+                Piece::Rook => self.generate_rook_moves(&mut moves, *piece, i),
+                Piece::Knight => self.generate_knight_moves(&mut moves, *piece, i),
+                Piece::Bishop => self.generate_bishop_moves(&mut moves, *piece, i),
+                Piece::Pawn(_) => self.generate_pawn_moves(&mut moves, *piece, i),
             }
         }
+
+        // for (i, space) in self.board.iter().enumerate() {
+        //     if let Some(space) = space {
+        //         if space.side == player {
+        //             if space.side == Side::White && self.white_check || space.side == Side::Black && self.black_check {
+        //                 if let Piece::King = space.piece {
+        //                     println!("CHECK");
+        //                     self.generate_king_moves(&mut moves, i);
+        //                 }
+        //             } else {
+        //                 match space.piece {
+        //                     Piece::King => self.generate_king_moves(&mut moves, i),
+        //                     Piece::Queen => self.generate_queen_moves(&mut moves, i),
+        //                     Piece::Rook => self.generate_rook_moves(&mut moves, i),
+        //                     Piece::Knight => self.generate_knight_moves(&mut moves, i),
+        //                     Piece::Bishop => self.generate_bishop_moves(&mut moves, i),
+        //                     Piece::Pawn(_) => self.generate_pawn_moves(&mut moves, i),
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
 
         moves
     }
@@ -223,18 +274,18 @@ impl Game {
 
     // Individual peice move functions to ease testing
     #[inline(always)]
-    fn generate_king_moves(&self, moves: &mut Vec<Game>, src: usize) {
+    fn generate_king_moves(&self, moves: &mut Vec<Game>, src: usize, index: usize) {
         [UP_RIGHT, UP, UP_LEFT, RIGHT].iter().for_each(|offset| {
-            self.make_checked_jump(moves, src, src + offset, Game::king_check);
+            self.make_checked_jump(moves, src, src + offset, index, Game::king_check);
             match src.checked_sub(*offset) {
-                Some(dest) => self.make_checked_jump(moves, src, dest, Game::king_check),
+                Some(dest) => self.make_checked_jump(moves, src, dest, index, Game::king_check),
                 None => {}
             }
         })
     }
 
     #[inline(always)]
-    fn generate_pawn_moves(&self, moves: &mut Vec<Game>, src: usize) {
+    fn generate_pawn_moves(&self, moves: &mut Vec<Game>, src: usize, index: usize) {
         // TODO: En passent
         match self.board[src]
             .expect("generate pawn moves called on empty space")
@@ -244,7 +295,7 @@ impl Game {
                 let dest = src + UP;
                 if dest & 0x88 == 0 {
                     if let None = self.board[dest] {
-                        moves.push(self.make_move(src, dest));
+                        moves.push(self.make_move(src, dest, index));
                     }
                 }
                 // If we're on the starting space, generate the two space move
@@ -252,7 +303,7 @@ impl Game {
                 if src >= 0x10 && src <= 0x17 {
                     let dest = src + UP + UP;
                     if let None = self.board[dest] {
-                        moves.push(self.make_move(src, dest));
+                        moves.push(self.make_move(src, dest, index));
                     }
                 }
                 let dest = src + UP_RIGHT;
@@ -261,7 +312,7 @@ impl Game {
                         side: Side::Black, ..
                     }) = self.board[dest]
                     {
-                        moves.push(self.make_move(src, dest));
+                        moves.push(self.make_move(src, dest, index));
                     }
                 }
                 let dest = src + UP_LEFT;
@@ -270,7 +321,7 @@ impl Game {
                         side: Side::Black, ..
                     }) = self.board[dest]
                     {
-                        moves.push(self.make_move(src, dest));
+                        moves.push(self.make_move(src, dest, index));
                     }
                 }
             }
@@ -279,7 +330,7 @@ impl Game {
                     Some(dest) => {
                         if dest & 0x88 == 0 {
                             if let None = self.board[dest] {
-                                moves.push(self.make_move(src, dest));
+                                moves.push(self.make_move(src, dest, index));
                             }
                         }
                     }
@@ -290,7 +341,7 @@ impl Game {
                 if src >= 0x60 && src <= 0x67 {
                     let dest = src - UP - UP;
                     if let None = self.board[dest] {
-                        moves.push(self.make_move(src, dest));
+                        moves.push(self.make_move(src, dest, index));
                     }
                 }
                 match src.checked_sub(UP_RIGHT) {
@@ -300,7 +351,7 @@ impl Game {
                                 side: Side::White, ..
                             }) = self.board[dest]
                             {
-                                moves.push(self.make_move(src, dest));
+                                moves.push(self.make_move(src, dest, index));
                             }
                         }
                     }
@@ -313,7 +364,7 @@ impl Game {
                                 side: Side::White, ..
                             }) = self.board[dest]
                             {
-                                moves.push(self.make_move(src, dest));
+                                moves.push(self.make_move(src, dest, index));
                             }
                         }
                     }
@@ -324,28 +375,28 @@ impl Game {
     }
 
     #[inline(always)]
-    fn generate_knight_moves(&self, moves: &mut Vec<Game>, src: usize) {
+    fn generate_knight_moves(&self, moves: &mut Vec<Game>, src: usize, index: usize) {
         KNIGHT_MOVES.iter().for_each(|offset| {
-            self.make_jump_move(moves, src, src + offset);
+            self.make_jump_move(moves, src, src + offset, index);
             match src.checked_sub(*offset) {
-                Some(dest) => self.make_jump_move(moves, src, dest),
+                Some(dest) => self.make_jump_move(moves, src, dest, index),
                 None => {}
             }
         })
     }
 
     #[inline(always)]
-    fn generate_queen_moves(&self, moves: &mut Vec<Game>, src: usize) {
+    fn generate_queen_moves(&self, moves: &mut Vec<Game>, src: usize, index: usize) {
         // Queen moves as the union of rook and bishop
-        self.generate_rook_moves(moves, src);
-        self.generate_bishop_moves(moves, src);
+        self.generate_rook_moves(moves, src, index);
+        self.generate_bishop_moves(moves, src, index);
     }
 
     #[inline(always)]
-    fn generate_bishop_moves(&self, moves: &mut Vec<Game>, src: usize) {
-        self.make_sliding_moves(moves, src, |i| i + UP_RIGHT);
-        self.make_sliding_moves(moves, src, |i| i + UP_LEFT);
-        self.make_sliding_moves(moves, src, |i| {
+    fn generate_bishop_moves(&self, moves: &mut Vec<Game>, src: usize, index: usize) {
+        self.make_sliding_moves(moves, src, index, |i| i + UP_RIGHT);
+        self.make_sliding_moves(moves, src, index, |i| i + UP_LEFT);
+        self.make_sliding_moves(moves, src, index, |i| {
             // Invert UP_RIGHT becomes DOWN_LEFT
             // If we underflow we're off the bottom, so set to a know fail value
             match i.checked_sub(UP_RIGHT) {
@@ -353,7 +404,7 @@ impl Game {
                 None => 0x88,
             }
         });
-        self.make_sliding_moves(moves, src, |i| {
+        self.make_sliding_moves(moves, src, index, |i| {
             // Invert UP_LEFT becomes DOWN_RIGHT
             // If we underflow we're off the bottom, so set to a know fail value
             match i.checked_sub(UP_LEFT) {
@@ -364,10 +415,10 @@ impl Game {
     }
 
     #[inline(always)]
-    fn generate_rook_moves(&self, moves: &mut Vec<Game>, src: usize) {
-        self.make_sliding_moves(moves, src, |i| i + RIGHT);
-        self.make_sliding_moves(moves, src, |i| i + UP);
-        self.make_sliding_moves(moves, src, |i| {
+    fn generate_rook_moves(&self, moves: &mut Vec<Game>, src: usize, index: usize) {
+        self.make_sliding_moves(moves, src, index, |i| i + RIGHT);
+        self.make_sliding_moves(moves, src, index, |i| i + UP);
+        self.make_sliding_moves(moves, src, index, |i| {
             // Invert UP becomes DOWN
             // If we underflow we're off the bottom, so set to a know fail value
             match i.checked_sub(UP) {
@@ -375,7 +426,7 @@ impl Game {
                 None => 0x88,
             }
         });
-        self.make_sliding_moves(moves, src, |i| {
+        self.make_sliding_moves(moves, src, index, |i| {
             // Invert RIGHT becomes LEFT
             // If we underflow we're off the bottom, so set to a know fail value
             match i.checked_sub(RIGHT) {
@@ -385,15 +436,10 @@ impl Game {
         });
     }
 
-    fn make_sliding_moves(
-        &self,
-        moves: &mut Vec<Game>,
-        src: usize,
-        index_exp: fn(usize) -> usize,
-    ) {
+    fn make_sliding_moves(&self, moves: &mut Vec<Game>, src: usize, index: usize, src_exp: fn(usize) -> usize) {
         let mut dest = src;
         loop {
-            dest = index_exp(dest);
+            dest = src_exp(dest);
             if dest & 0x88 == 0 {
                 match self.board[dest] {
                     Some(target) => {
@@ -402,12 +448,12 @@ impl Game {
                                 .expect("sliding move called on empty space")
                                 .side
                         {
-                            moves.push(self.make_move(src, dest));
+                            moves.push(self.make_move(src, dest, index));
                         }
                         break;
                     }
                     None => {
-                        moves.push(self.make_move(src, dest));
+                        moves.push(self.make_move(src, dest, index));
                     }
                 }
             } else {
@@ -421,12 +467,15 @@ impl Game {
         moves: &mut Vec<Game>,
         src: usize,
         dest: usize,
+        index: usize,
         check: fn(&Game, Side, usize) -> bool,
     ) {
         if dest & 0x88 == 0 {
             if check(
                 self,
-                self.board[src].expect("jump move called on empty space").side,
+                self.board[src]
+                    .expect("jump move called on empty space")
+                    .side,
                 dest,
             ) {
                 return;
@@ -434,23 +483,24 @@ impl Game {
             match self.board[dest] {
                 Some(target) => {
                     if target.side != self.board[src].unwrap().side {
-                        moves.push(self.make_move(src, dest));
+                        moves.push(self.make_move(src, dest, index));
                     }
                 }
-                None => moves.push(self.make_move(src, dest)),
+                None => moves.push(self.make_move(src, dest, index)),
             }
         }
     }
 
-    fn make_jump_move(&self, moves: &mut Vec<Game>, src: usize, dest: usize) {
-        self.make_checked_jump(moves, src, dest, |_, _, _| false)
+    fn make_jump_move(&self, moves: &mut Vec<Game>, src: usize, dest: usize, index: usize) {
+        self.make_checked_jump(moves, src, dest, index, |_, _, _| false)
     }
 
     #[inline(always)]
-    fn make_move(&self, src: usize, dest: usize) -> Game {
+    fn make_move(&self, src: usize, dest: usize, index: usize,) -> Game {
         let mut new_board = self.clone();
         new_board.board[dest] = new_board.board[src];
         new_board.board[src] = None;
+        new_board.pieces[index] = dest;
 
         new_board
     }
@@ -492,10 +542,10 @@ mod tests {
         let mut moves = vec![];
 
         // E1
-        board.generate_king_moves(&mut moves, 4);
+        board.generate_king_moves(&mut moves, 4, WHITE_KING);
         assert_eq!(0, moves.len());
         // E8
-        board.generate_king_moves(&mut moves, 0x74);
+        board.generate_king_moves(&mut moves, 0x74, BLACK_KING);
         assert_eq!(0, moves.len());
     }
 
@@ -515,7 +565,7 @@ mod tests {
             side: Side::Black,
         });
 
-        board.generate_king_moves(&mut moves, 0x34);
+        board.generate_king_moves(&mut moves, 0x34, WHITE_KING);
         assert_eq!(6, moves.len());
     }
 
@@ -540,7 +590,7 @@ mod tests {
             side: Side::Black,
         });
 
-        board.generate_king_moves(&mut moves, 0x43);
+        board.generate_king_moves(&mut moves, 0x43, WHITE_KING);
         assert_eq!(3, moves.len());
     }
 
@@ -550,10 +600,10 @@ mod tests {
         let mut moves = vec![];
 
         // D1
-        board.generate_queen_moves(&mut moves, 3);
+        board.generate_queen_moves(&mut moves, 3, WHITE_QUEEN);
         assert_eq!(0, moves.len());
         // D8
-        board.generate_queen_moves(&mut moves, 0x73);
+        board.generate_queen_moves(&mut moves, 0x73, BLACK_QUEEN);
         assert_eq!(0, moves.len());
     }
 
@@ -568,7 +618,7 @@ mod tests {
             side: Side::White,
         });
 
-        board.generate_queen_moves(&mut moves, 0x43);
+        board.generate_queen_moves(&mut moves, 0x43, WHITE_QUEEN);
         assert_eq!(19, moves.len());
     }
 
@@ -578,16 +628,16 @@ mod tests {
         let mut moves = vec![];
 
         // C1
-        board.generate_bishop_moves(&mut moves, 2);
+        board.generate_bishop_moves(&mut moves, 2, WHITE_QUEEN_BISHOP);
         assert_eq!(0, moves.len());
         // F1
-        board.generate_bishop_moves(&mut moves, 5);
+        board.generate_bishop_moves(&mut moves, 5, WHITE_KING_BISHOP);
         assert_eq!(0, moves.len());
         // C8
-        board.generate_bishop_moves(&mut moves, 114);
+        board.generate_bishop_moves(&mut moves, 114, BLACK_QUEEN_BISHOP);
         assert_eq!(0, moves.len());
         // F8
-        board.generate_bishop_moves(&mut moves, 117);
+        board.generate_bishop_moves(&mut moves, 117, BLACK_KING_BISHOP);
         assert_eq!(0, moves.len());
     }
 
@@ -602,7 +652,7 @@ mod tests {
             side: Side::White,
         });
 
-        board.generate_bishop_moves(&mut moves, 67);
+        board.generate_bishop_moves(&mut moves, 67, WHITE_KING_BISHOP);
         assert_eq!(8, moves.len());
     }
 
@@ -617,7 +667,7 @@ mod tests {
             side: Side::White,
         });
 
-        board.generate_bishop_moves(&mut moves, 65);
+        board.generate_bishop_moves(&mut moves, 65, WHITE_KING_BISHOP);
         assert_eq!(6, moves.len());
     }
 
@@ -627,16 +677,16 @@ mod tests {
         let mut moves = vec![];
 
         // A1
-        board.generate_rook_moves(&mut moves, 0);
+        board.generate_rook_moves(&mut moves, 0, WHITE_QUEEN_ROOK);
         assert_eq!(0, moves.len());
         // H1
-        board.generate_rook_moves(&mut moves, 7);
+        board.generate_rook_moves(&mut moves, 7, WHITE_KING_ROOK);
         assert_eq!(0, moves.len());
         // A8
-        board.generate_rook_moves(&mut moves, 112);
+        board.generate_rook_moves(&mut moves, 112, BLACK_QUEEN_ROOK);
         assert_eq!(0, moves.len());
         // H8
-        board.generate_rook_moves(&mut moves, 119);
+        board.generate_rook_moves(&mut moves, 119, BLACK_KING_ROOK);
         assert_eq!(0, moves.len());
     }
 
@@ -651,7 +701,7 @@ mod tests {
             side: Side::White,
         });
 
-        board.generate_rook_moves(&mut moves, 67);
+        board.generate_rook_moves(&mut moves, 67, WHITE_KING_ROOK);
         assert_eq!(11, moves.len());
     }
 
@@ -661,16 +711,16 @@ mod tests {
         let mut moves = vec![];
 
         // B1
-        board.generate_knight_moves(&mut moves, 1);
+        board.generate_knight_moves(&mut moves, 1, WHITE_QUEEN_KNIGHT);
         assert_eq!(2, moves.len());
         // G1
-        board.generate_knight_moves(&mut moves, 6);
+        board.generate_knight_moves(&mut moves, 6, WHITE_KING_KNIGHT);
         assert_eq!(4, moves.len());
         // B8
-        board.generate_knight_moves(&mut moves, 113);
+        board.generate_knight_moves(&mut moves, 113, BLACK_QUEEN_KNIGHT);
         assert_eq!(6, moves.len());
         // G8
-        board.generate_knight_moves(&mut moves, 118);
+        board.generate_knight_moves(&mut moves, 118, BLACK_KING_KNIGHT);
         assert_eq!(8, moves.len());
     }
 
@@ -685,7 +735,7 @@ mod tests {
             side: Side::White,
         });
 
-        board.generate_knight_moves(&mut moves, 67);
+        board.generate_knight_moves(&mut moves, 67, WHITE_KING_KNIGHT);
         assert_eq!(8, moves.len());
     }
 
@@ -700,7 +750,7 @@ mod tests {
             side: Side::White,
         });
 
-        board.generate_knight_moves(&mut moves, 64);
+        board.generate_knight_moves(&mut moves, 64, WHITE_KING_KNIGHT);
         assert_eq!(4, moves.len());
     }
 
@@ -710,16 +760,16 @@ mod tests {
         let mut moves = vec![];
 
         // A2
-        board.generate_pawn_moves(&mut moves, 17);
+        board.generate_pawn_moves(&mut moves, 17, WHITE_PAWN_A);
         assert_eq!(2, moves.len());
         // E2
-        board.generate_pawn_moves(&mut moves, 21);
+        board.generate_pawn_moves(&mut moves, 21, WHITE_PAWN_E);
         assert_eq!(4, moves.len());
         // B7
-        board.generate_pawn_moves(&mut moves, 97);
+        board.generate_pawn_moves(&mut moves, 97, BLACK_PAWN_B);
         assert_eq!(6, moves.len());
         // G7
-        board.generate_pawn_moves(&mut moves, 102);
+        board.generate_pawn_moves(&mut moves, 102, BLACK_PAWN_G);
         assert_eq!(8, moves.len());
     }
 
@@ -739,10 +789,10 @@ mod tests {
             side: Side::Black,
         });
 
-        board.generate_pawn_moves(&mut moves, 0x33);
+        board.generate_pawn_moves(&mut moves, 0x33, WHITE_PAWN_D);
         assert_eq!(2, moves.len());
 
-        board.generate_pawn_moves(&mut moves, 0x42);
+        board.generate_pawn_moves(&mut moves, 0x42, BLACK_PAWN_C);
         assert_eq!(4, moves.len());
     }
 
@@ -762,7 +812,7 @@ mod tests {
             side: Side::White,
         });
 
-        board.generate_pawn_moves(&mut moves, 67);
+        board.generate_pawn_moves(&mut moves, 67, WHITE_PAWN_D);
         assert_eq!(0, moves.len());
     }
 
@@ -782,7 +832,7 @@ mod tests {
             side: Side::Black,
         });
 
-        board.generate_pawn_moves(&mut moves, 67);
+        board.generate_pawn_moves(&mut moves, 67, WHITE_PAWN_D);
         assert_eq!(0, moves.len());
     }
 
@@ -797,7 +847,7 @@ mod tests {
             side: Side::White,
         });
 
-        board.generate_pawn_moves(&mut moves, 0x53);
+        board.generate_pawn_moves(&mut moves, 0x53, WHITE_PAWN_D);
         assert_eq!(2, moves.len());
     }
 
