@@ -103,7 +103,7 @@ impl Board {
         // Check pawn attacks
         [UP_LEFT, UP_RIGHT].iter().fold(false, |val, offset| {
             // Detect black attacking pawns - which from above
-            if side == Side::White && (position + offset) & 0x88 == 0 {
+            if side == Side::White {
                 if let Some(Space {
                     piece: Piece::Pawn(_),
                     side: Side::Black,
@@ -113,6 +113,7 @@ impl Board {
                 };
 
             false || val
+        
             // Detect white attacking pawns - which attack from below
             } else {
                 if let Some(attack) = position.checked_sub(*offset) {
@@ -236,7 +237,7 @@ impl Board {
                 }
                 // If we're on the starting space, generate the two space move
                 // We can omit the off board test as this can't be off board
-                if src <= 0x17 && src >= 0x10 {
+                if src >= 0x10 && src <= 0x17 {
                     let dest = src + UP + UP;
                     if let None = self.0[dest] {
                         moves.push(self.make_move(src, dest));
@@ -274,7 +275,7 @@ impl Board {
                 }
                 // If we're on the starting space, generate the two space move
                 // We can omit the off board test & checked sub as this can't be off board
-                if src <= 0x67 && src >= 0x60 {
+                if src >= 0x60 && src <= 0x67 {
                     let dest = src - UP - UP;
                     if let None = self.0[dest] {
                         moves.push(self.make_move(src, dest));
@@ -463,6 +464,12 @@ mod tests {
                 new_moves.append(&mut m.generate_ply(side));
             }
 
+            // let t = new_moves.iter().filter(|&b| {
+            //     b.0.iter().filter(|&s| {
+            //         *s != None
+            //     }).count() == 31
+            // }).count();
+            // println!("{}", t);
             assert_eq!(value, new_moves.len());
             moves = new_moves;
             if side == Side::White {
@@ -492,7 +499,7 @@ mod tests {
         let mut moves = vec![];
 
         // Place king on D5
-        board.0[0x43] = Some(Space {
+        board.0[0x34] = Some(Space {
             piece: Piece::King,
             side: Side::White,
         });
@@ -502,8 +509,8 @@ mod tests {
             side: Side::Black,
         });
 
-        board.generate_king_moves(&mut moves, 0x4367);
-        assert_eq!(8, moves.len());
+        board.generate_king_moves(&mut moves, 0x34);
+        assert_eq!(6, moves.len());
     }
 
     #[test]
@@ -666,7 +673,7 @@ mod tests {
         let mut board = Board::new();
         let mut moves = vec![];
 
-        // Place rook on D5
+        // Place knight on D5
         board.0[67] = Some(Space {
             piece: Piece::Knight,
             side: Side::White,
@@ -681,7 +688,7 @@ mod tests {
         let mut board = Board::new();
         let mut moves = vec![];
 
-        // Place rook on D5
+        // Place knight on D5
         board.0[64] = Some(Space {
             piece: Piece::Knight,
             side: Side::White,
@@ -830,6 +837,44 @@ mod tests {
         // Pawn on C5
         board.0[0x42] = Some(Space {
             piece: Piece::Pawn(false),
+            side: Side::Black,
+        });
+
+        // E8
+        assert!(board.king_check(Side::White, 0x33));
+    }
+
+    #[test]
+    pub fn black_king_in_check_from_pawn() {
+        let mut board = Board::new();
+
+        // King at D4
+        board.0[0x33] = Some(Space {
+            piece: Piece::King,
+            side: Side::Black,
+        });
+        // Pawn on E3
+        board.0[0x24] = Some(Space {
+            piece: Piece::Pawn(false),
+            side: Side::White,
+        });
+
+        // E8
+        assert!(board.king_check(Side::Black, 0x33));
+    }
+
+    #[test]
+    pub fn king_in_check_from_rook() {
+        let mut board = Board::new();
+
+        // King at D4
+        board.0[0x33] = Some(Space {
+            piece: Piece::King,
+            side: Side::White,
+        });
+        // Pawn on H5
+        board.0[0x37] = Some(Space {
+            piece: Piece::Rook,
             side: Side::Black,
         });
 
