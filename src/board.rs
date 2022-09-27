@@ -11,9 +11,6 @@ const UP_RIGHT: usize = 17;
 const RIGHT: usize = 1;
 const KNIGHT_MOVES: [usize; 4] = [14, 18, 31, 33];
 
-// Captured position value
-const CAPTURED: usize = 0xFF;
-
 // Piece list index values
 const WHITE_QUEEN_ROOK: usize = 0;
 const WHITE_QUEEN_KNIGHT: usize = 1;
@@ -507,13 +504,20 @@ impl Game {
     fn make_move(&self, src: usize, dest: usize, index: usize) -> Game {
         let mut new_board = self.clone();
 
+        // TODO: Remove me
         new_board.pieces[index] = dest;
-        if new_board.board[src].unwrap().side == Side::White {
-            new_board.white.insert(new_board.board[src].unwrap(), dest);
-        } else {
-            new_board.black.insert(new_board.board[src].unwrap(), dest);
+
+        // Update piece hashmaps
+        let (me, opponent) = match new_board.board[src].unwrap().side {
+            Side::White => (&mut new_board.white, &mut new_board.black),
+            Side::Black => (&mut new_board.black, &mut new_board.white),
+        };
+        me.insert(new_board.board[src].unwrap(), dest);
+        if let Some(space) = new_board.board[dest] {
+            opponent.remove(&space);
         }
 
+        // Update board array
         new_board.board[dest] = new_board.board[src];
         new_board.board[src] = None;
 
@@ -601,7 +605,7 @@ mod tests {
         assert_eq!(0x13, game.pieces[BLACK_QUEEN]);
         assert_eq!(None, game.board[0x73]);
         assert_eq!(queen, game.board[0x13]);
-        assert_eq!(CAPTURED, game.pieces[WHITE_PAWN_D]);
+        assert!(!game.white.contains_key(&Space{side: Side::White, piece: Piece::Pawn(3, false)}))
     }
 
     #[test]
