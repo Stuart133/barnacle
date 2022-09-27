@@ -1,4 +1,7 @@
-use std::{collections::HashMap, mem::{Discriminant, discriminant}};
+use std::{
+    collections::HashMap,
+    mem::{discriminant, Discriminant},
+};
 
 // Directional movement offsets using 0x88 board representation
 // Missing directions are inverts of these (So we subtract)
@@ -49,9 +52,9 @@ const BLACK_PAWN_H: usize = 31;
 pub enum Piece {
     King,
     Queen,
-    Rook(bool), // True if queen rook
-    Knight(bool),// True if queen knight
-    Bishop(bool),// True if queen bishop
+    Rook(bool),     // True if king rook
+    Knight(bool),   // True if king knight
+    Bishop(bool),   // True if king bishop
     Pawn(u8, bool), // Store the pawn file & en passent status
 }
 
@@ -122,8 +125,11 @@ impl Game {
     pub fn generate_ply(&self, player: Side) -> Vec<Game> {
         let mut moves = vec![];
 
-        let range = if player == Side::White { 0..16 } else { 16..32 };
-        let side = if player == Side::White {&self.white} else {&self.black};
+        let side = if player == Side::White {
+            &self.white
+        } else {
+            &self.black
+        };
 
         for (space, position) in side {
             match space.piece {
@@ -135,42 +141,6 @@ impl Game {
                 Piece::Pawn(_, _) => self.generate_pawn_moves(&mut moves, *position, 0),
             }
         }
-
-        // for (i, position) in self.pieces[range].iter().enumerate() {
-        //     match self.board[*position]
-        //         .expect("piece index set to empty space")
-        //         .piece
-        //     {
-        //         Piece::King => self.generate_king_moves(&mut moves, *position, i),
-        //         Piece::Queen => self.generate_queen_moves(&mut moves, *position, i),
-        //         Piece::Rook(_) => self.generate_rook_moves(&mut moves, *position, i),
-        //         Piece::Knight(_) => self.generate_knight_moves(&mut moves, *position, i),
-        //         Piece::Bishop(_) => self.generate_bishop_moves(&mut moves, *position, i),
-        //         Piece::Pawn(_, _) => self.generate_pawn_moves(&mut moves, *position, i),
-        //     }
-        // }
-
-        // for (i, space) in self.board.iter().enumerate() {
-        //     if let Some(space) = space {
-        //         if space.side == player {
-        //             if space.side == Side::White && self.white_check || space.side == Side::Black && self.black_check {
-        //                 if let Piece::King = space.piece {
-        //                     println!("CHECK");
-        //                     self.generate_king_moves(&mut moves, i);
-        //                 }
-        //             } else {
-        //                 match space.piece {
-        //                     Piece::King => self.generate_king_moves(&mut moves, i),
-        //                     Piece::Queen => self.generate_queen_moves(&mut moves, i),
-        //                     Piece::Rook => self.generate_rook_moves(&mut moves, i),
-        //                     Piece::Knight => self.generate_knight_moves(&mut moves, i),
-        //                     Piece::Bishop => self.generate_bishop_moves(&mut moves, i),
-        //                     Piece::Pawn(_) => self.generate_pawn_moves(&mut moves, i),
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
 
         moves
     }
@@ -508,11 +478,6 @@ impl Game {
         index: usize,
         check: fn(&Game, Side, usize) -> bool,
     ) {
-        let src2 = self.pieces[index];
-        if src2 != src {
-            println!("UH OH"); // Well fuck
-        }
-
         if dest & 0x88 == 0 {
             if check(
                 self,
@@ -541,11 +506,14 @@ impl Game {
     #[inline(always)]
     fn make_move(&self, src: usize, dest: usize, index: usize) -> Game {
         let mut new_board = self.clone();
+
         new_board.pieces[index] = dest;
-        // if let Some(space) = new_board.pieces[dest] {
-        //     new_board.
-        // }
-        
+        if new_board.board[src].unwrap().side == Side::White {
+            new_board.white.insert(new_board.board[src].unwrap(), dest);
+        } else {
+            new_board.black.insert(new_board.board[src].unwrap(), dest);
+        }
+
         new_board.board[dest] = new_board.board[src];
         new_board.board[src] = None;
 
@@ -585,15 +553,40 @@ mod tests {
     }
 
     #[test]
-    pub fn make_move_sets_board_and_pieces() {
+    pub fn make_move_black_sets_board_and_pieces() {
         let game = Game::new();
         let queen = game.board[0x73];
 
         // Move black queen to G6
         let game = game.make_move(0x73, 0x55, BLACK_QUEEN);
 
-        assert_eq!(0x55, game.pieces[BLACK_QUEEN]);
+        assert_eq!(
+            0x55,
+            game.black[&Space {
+                piece: Piece::Queen,
+                side: Side::Black
+            }]
+        );
         assert_eq!(None, game.board[0x73]);
+        assert_eq!(queen, game.board[0x55]);
+    }
+
+    #[test]
+    pub fn make_move_white_sets_board_and_pieces() {
+        let game = Game::new();
+        let queen = game.board[0x03];
+
+        // Move white queen to G6
+        let game = game.make_move(0x03, 0x55, WHITE_QUEEN);
+
+        assert_eq!(
+            0x55,
+            game.white[&Space {
+                piece: Piece::Queen,
+                side: Side::White
+            }]
+        );
+        assert_eq!(None, game.board[0x03]);
         assert_eq!(queen, game.board[0x55]);
     }
 
