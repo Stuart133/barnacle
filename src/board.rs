@@ -550,204 +550,211 @@ mod tests {
 
     #[test]
     pub fn king_moves_from_start() {
-        let board = Game::new();
+        let game = Game::new();
         let mut moves = vec![];
 
         // E1
-        board.generate_king_moves(&mut moves, 4, WHITE_KING);
+        game.generate_king_moves(&mut moves, game.pieces[WHITE_KING], WHITE_KING);
         assert_eq!(0, moves.len());
         // E8
-        board.generate_king_moves(&mut moves, 0x74, BLACK_KING);
+        game.generate_king_moves(&mut moves, game.pieces[BLACK_KING], BLACK_KING);
         assert_eq!(0, moves.len());
     }
 
     #[test]
     pub fn king_moves_from_middle() {
-        let mut board = Game::new();
         let mut moves = vec![];
 
-        // Place king on D5
-        board.board[0x34] = Some(Space {
-            piece: Piece::King,
-            side: Side::White,
-        });
-        // Place pawn on E5
-        board.board[0x44] = Some(Space {
-            piece: Piece::Pawn(false),
-            side: Side::Black,
-        });
+        // Move white king to E4 & black pawn to E5
+        let game =
+            Game::new()
+                .make_move(0x04, 0x34, WHITE_KING)
+                .make_move(0x64, 0x44, BLACK_PAWN_E);
 
-        board.generate_king_moves(&mut moves, 0x34, WHITE_KING);
+        game.generate_king_moves(&mut moves, game.pieces[WHITE_KING], WHITE_KING);
         assert_eq!(6, moves.len());
     }
 
     #[test]
     pub fn king_moves_with_potential_check() {
-        let mut board = Game::new();
         let mut moves = vec![];
 
-        // Place king on D5
-        board.board[0x43] = Some(Space {
-            piece: Piece::King,
-            side: Side::White,
-        });
-        // Place pawn on C5
-        board.board[0x42] = Some(Space {
-            piece: Piece::Pawn(false),
-            side: Side::Black,
-        });
-        // Place bishop on C7
-        board.board[0x62] = Some(Space {
-            piece: Piece::Bishop,
-            side: Side::Black,
-        });
+        // Move white king to D5, black pawn to C5 & black bishop to C7
+        let game = Game::new()
+            .make_move(0x04, 0x43, WHITE_KING)
+            .make_move(0x62, 0x42, BLACK_PAWN_C)
+            .make_move(0x75, 0x62, BLACK_KING_BISHOP);
 
-        board.generate_king_moves(&mut moves, 0x43, WHITE_KING);
+        game.generate_king_moves(&mut moves, game.pieces[WHITE_KING], WHITE_KING);
         assert_eq!(3, moves.len());
     }
 
     #[test]
     pub fn queen_moves_from_start() {
-        let board = Game::new();
+        let game = Game::new();
         let mut moves = vec![];
 
         // D1
-        board.generate_queen_moves(&mut moves, 3, WHITE_QUEEN);
+        game.generate_queen_moves(&mut moves, game.pieces[WHITE_QUEEN], WHITE_QUEEN);
         assert_eq!(0, moves.len());
         // D8
-        board.generate_queen_moves(&mut moves, 0x73, BLACK_QUEEN);
+        game.generate_queen_moves(&mut moves, game.pieces[BLACK_QUEEN], BLACK_QUEEN);
         assert_eq!(0, moves.len());
     }
 
     #[test]
     pub fn queen_moves_from_middle() {
-        let mut board = Game::new();
         let mut moves = vec![];
 
-        // Place queen on D5
-        board.board[0x43] = Some(Space {
-            piece: Piece::Queen,
-            side: Side::White,
-        });
+        // Move white queen to D5
+        let game = Game::new().make_move(0x03, 0x43, WHITE_QUEEN);
 
-        board.generate_queen_moves(&mut moves, 0x43, WHITE_QUEEN);
+        game.generate_queen_moves(&mut moves, game.pieces[WHITE_QUEEN], WHITE_QUEEN);
         assert_eq!(19, moves.len());
     }
 
     #[test]
     pub fn bishop_moves_from_start() {
-        let board = Game::new();
+        let game = Game::new();
         let mut moves = vec![];
 
         // C1
-        board.generate_bishop_moves(&mut moves, 2, WHITE_QUEEN_BISHOP);
+        game.generate_bishop_moves(
+            &mut moves,
+            game.pieces[WHITE_QUEEN_BISHOP],
+            WHITE_QUEEN_BISHOP,
+        );
         assert_eq!(0, moves.len());
         // F1
-        board.generate_bishop_moves(&mut moves, 5, WHITE_KING_BISHOP);
+        game.generate_bishop_moves(
+            &mut moves,
+            game.pieces[WHITE_KING_BISHOP],
+            WHITE_KING_BISHOP,
+        );
         assert_eq!(0, moves.len());
         // C8
-        board.generate_bishop_moves(&mut moves, 114, BLACK_QUEEN_BISHOP);
+        game.generate_bishop_moves(
+            &mut moves,
+            game.pieces[BLACK_QUEEN_BISHOP],
+            BLACK_QUEEN_BISHOP,
+        );
         assert_eq!(0, moves.len());
         // F8
-        board.generate_bishop_moves(&mut moves, 117, BLACK_KING_BISHOP);
+        game.generate_bishop_moves(
+            &mut moves,
+            game.pieces[BLACK_KING_BISHOP],
+            BLACK_KING_BISHOP,
+        );
         assert_eq!(0, moves.len());
     }
 
     #[test]
     pub fn bishop_moves_from_middle() {
-        let mut board = Game::new();
         let mut moves = vec![];
 
-        // Place bishop on D5
-        board.board[67] = Some(Space {
-            piece: Piece::Bishop,
-            side: Side::White,
-        });
+        // Move white bishop to D5
+        let game = Game::new().make_move(0x05, 0x43, WHITE_KING_BISHOP);
 
-        board.generate_bishop_moves(&mut moves, 67, WHITE_KING_BISHOP);
+        game.generate_bishop_moves(
+            &mut moves,
+            game.pieces[WHITE_KING_BISHOP],
+            WHITE_KING_BISHOP,
+        );
         assert_eq!(8, moves.len());
     }
 
     #[test]
     pub fn bishop_moves_from_side() {
-        let mut board = Game::new();
         let mut moves = vec![];
 
-        // Place bishop on B5
-        board.board[65] = Some(Space {
-            piece: Piece::Bishop,
-            side: Side::White,
-        });
+        // Move white bishop to B5
+        let game = Game::new().make_move(0x05, 0x41, WHITE_KING_BISHOP);
 
-        board.generate_bishop_moves(&mut moves, 65, WHITE_KING_BISHOP);
+        game.generate_bishop_moves(
+            &mut moves,
+            game.pieces[WHITE_KING_BISHOP],
+            WHITE_KING_BISHOP,
+        );
         assert_eq!(6, moves.len());
     }
 
     #[test]
     pub fn rook_moves_from_start() {
-        let board = Game::new();
+        let game = Game::new();
         let mut moves = vec![];
 
         // A1
-        board.generate_rook_moves(&mut moves, 0, WHITE_QUEEN_ROOK);
+        game.generate_rook_moves(&mut moves, game.pieces[WHITE_QUEEN_ROOK], WHITE_QUEEN_ROOK);
         assert_eq!(0, moves.len());
         // H1
-        board.generate_rook_moves(&mut moves, 7, WHITE_KING_ROOK);
+        game.generate_rook_moves(&mut moves, game.pieces[WHITE_KING_ROOK], WHITE_KING_ROOK);
         assert_eq!(0, moves.len());
         // A8
-        board.generate_rook_moves(&mut moves, 112, BLACK_QUEEN_ROOK);
+        game.generate_rook_moves(&mut moves, game.pieces[BLACK_QUEEN_ROOK], BLACK_QUEEN_ROOK);
         assert_eq!(0, moves.len());
         // H8
-        board.generate_rook_moves(&mut moves, 119, BLACK_KING_ROOK);
+        game.generate_rook_moves(&mut moves, game.pieces[BLACK_KING_ROOK], BLACK_KING_ROOK);
         assert_eq!(0, moves.len());
     }
 
     #[test]
     pub fn rook_moves_from_middle() {
-        let mut board = Game::new();
         let mut moves = vec![];
 
-        // Place rook on D5
-        board.board[67] = Some(Space {
-            piece: Piece::Rook,
-            side: Side::White,
-        });
+        // Move white rook to D5
+        let game = Game::new().make_move(0x00, 0x43, WHITE_QUEEN_ROOK);
 
-        board.generate_rook_moves(&mut moves, 67, WHITE_KING_ROOK);
+        game.generate_rook_moves(&mut moves, game.pieces[WHITE_QUEEN_ROOK], WHITE_QUEEN_ROOK);
         assert_eq!(11, moves.len());
     }
 
     #[test]
     pub fn knight_moves_from_start() {
-        let board = Game::new();
+        let game = Game::new();
         let mut moves = vec![];
 
         // B1
-        board.generate_knight_moves(&mut moves, 1, WHITE_QUEEN_KNIGHT);
+        game.generate_knight_moves(
+            &mut moves,
+            game.pieces[WHITE_QUEEN_KNIGHT],
+            WHITE_QUEEN_KNIGHT,
+        );
         assert_eq!(2, moves.len());
         // G1
-        board.generate_knight_moves(&mut moves, 6, WHITE_KING_KNIGHT);
+        game.generate_knight_moves(
+            &mut moves,
+            game.pieces[WHITE_KING_KNIGHT],
+            WHITE_KING_KNIGHT,
+        );
         assert_eq!(4, moves.len());
         // B8
-        board.generate_knight_moves(&mut moves, 113, BLACK_QUEEN_KNIGHT);
+        game.generate_knight_moves(
+            &mut moves,
+            game.pieces[BLACK_QUEEN_KNIGHT],
+            BLACK_QUEEN_KNIGHT,
+        );
         assert_eq!(6, moves.len());
         // G8
-        board.generate_knight_moves(&mut moves, 118, BLACK_KING_KNIGHT);
+        game.generate_knight_moves(
+            &mut moves,
+            game.pieces[BLACK_KING_KNIGHT],
+            BLACK_KING_KNIGHT,
+        );
         assert_eq!(8, moves.len());
     }
 
     #[test]
     pub fn knight_moves_from_middle() {
-        let mut board = Game::new();
         let mut moves = vec![];
 
-        // Place knight on D5
-        board.board[67] = Some(Space {
-            piece: Piece::Knight,
-            side: Side::White,
-        });
+        // Move white knight to D5
+        let game = Game::new().make_move(0x02, 0x43, WHITE_QUEEN_KNIGHT);
 
-        board.generate_knight_moves(&mut moves, 67, WHITE_KING_KNIGHT);
+        game.generate_knight_moves(
+            &mut moves,
+            game.pieces[WHITE_QUEEN_KNIGHT],
+            WHITE_QUEEN_KNIGHT,
+        );
         assert_eq!(8, moves.len());
     }
 
@@ -755,13 +762,13 @@ mod tests {
     pub fn knight_moves_from_side() {
         let mut moves = vec![];
 
-        // Move knight to A5
-        let game = Game::new().make_move(0x02, 0x40, WHITE_KING_KNIGHT);
+        // Move white knight to A5
+        let game = Game::new().make_move(0x02, 0x40, WHITE_QUEEN_KNIGHT);
 
         game.generate_knight_moves(
             &mut moves,
-            game.pieces[WHITE_KING_KNIGHT],
-            WHITE_KING_KNIGHT,
+            game.pieces[WHITE_QUEEN_KNIGHT],
+            WHITE_QUEEN_KNIGHT,
         );
         assert_eq!(4, moves.len());
     }
@@ -787,24 +794,18 @@ mod tests {
 
     #[test]
     pub fn pawn_move_from_center() {
-        let mut board = Game::new();
         let mut moves = vec![];
 
-        // Place pawn on D4
-        board.board[0x33] = Some(Space {
-            piece: Piece::Pawn(false),
-            side: Side::White,
-        });
-        // Place pawn on C5
-        board.board[0x42] = Some(Space {
-            piece: Piece::Pawn(false),
-            side: Side::Black,
-        });
+        // Move white pawn to D4 & black pawn to C5
+        let game =
+            Game::new()
+                .make_move(0x13, 0x33, WHITE_PAWN_D)
+                .make_move(0x62, 0x42, BLACK_PAWN_C);
 
-        board.generate_pawn_moves(&mut moves, 0x33, WHITE_PAWN_D);
+        game.generate_pawn_moves(&mut moves, game.pieces[WHITE_PAWN_D], WHITE_PAWN_D);
         assert_eq!(2, moves.len());
 
-        board.generate_pawn_moves(&mut moves, 0x42, BLACK_PAWN_C);
+        game.generate_pawn_moves(&mut moves, game.pieces[BLACK_PAWN_C], BLACK_PAWN_C);
         assert_eq!(4, moves.len());
     }
 
@@ -864,7 +865,7 @@ mod tests {
         let game =
             Game::new()
                 .make_move(0x04, 0x33, WHITE_KING)
-                .make_move(0x75, 0x51, BLACK_QUEEN_BISHOP);
+                .make_move(0x75, 0x51, BLACK_KING_BISHOP);
 
         assert!(game.king_check(Side::White, game.pieces[WHITE_KING]));
     }
@@ -897,7 +898,7 @@ mod tests {
         let game =
             Game::new()
                 .make_move(0x04, 0x33, WHITE_KING)
-                .make_move(0x70, 0x37, BLACK_KING_ROOK);
+                .make_move(0x70, 0x37, BLACK_QUEEN_ROOK);
 
         assert!(game.king_check(Side::White, game.pieces[WHITE_KING]));
     }
