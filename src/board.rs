@@ -470,6 +470,11 @@ impl Game {
         index: usize,
         check: fn(&Game, Side, usize) -> bool,
     ) {
+        let src2 = self.pieces[index];
+        if src2 != src {
+            println!("UH OH");  // Well fuck
+        }
+
         if dest & 0x88 == 0 {
             if check(
                 self,
@@ -741,16 +746,12 @@ mod tests {
 
     #[test]
     pub fn knight_moves_from_side() {
-        let mut board = Game::new();
         let mut moves = vec![];
 
-        // Place knight on D5
-        board.board[64] = Some(Space {
-            piece: Piece::Knight,
-            side: Side::White,
-        });
+        // Move knight to A5
+        let game = Game::new().make_move(0x02, 0x40, WHITE_KING_KNIGHT);
 
-        board.generate_knight_moves(&mut moves, 64, WHITE_KING_KNIGHT);
+        game.generate_knight_moves(&mut moves, 0x40, WHITE_KING_KNIGHT);
         assert_eq!(4, moves.len());
     }
 
