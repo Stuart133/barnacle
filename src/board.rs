@@ -71,8 +71,8 @@ pub struct Space {
 pub struct Game {
     board: [Option<Space>; 128], // TODO: Look into bijective map to replace this
     pieces: [usize; 32],
-    white: HashMap<Space, usize>,
-    black: HashMap<Space, usize>,
+    white: HashMap<Piece, usize>,
+    black: HashMap<Piece, usize>,
     white_check: bool,
     black_check: bool,
 }
@@ -104,18 +104,18 @@ impl Game {
             Some(Space { piece: Piece::Knight(true), side: Side::Black }), Some(Space { piece: Piece::Rook(true), side: Side::Black }), None, None, None, None, None, None, None, None,
         ], white_check: false, black_check: false, 
         pieces: [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67],
-        white: HashMap::from([(Space { piece: Piece::Rook(false), side: Side::White }, 0x00), (Space { piece: Piece::Knight(false), side: Side::White }, 0x01), (Space { piece: Piece::Bishop(false), side: Side::White }, 0x02),
-                              (Space { piece: Piece::Queen, side: Side::White }, 0x03), (Space { piece: Piece::King, side: Side::White }, 0x04), (Space { piece: Piece::Bishop(true), side: Side::White }, 0x05),
-                              (Space { piece: Piece::Knight(true), side: Side::White }, 0x06), (Space { piece: Piece::Rook(true), side: Side::White }, 0x07), (Space { piece: Piece::Pawn(0, false), side: Side::White }, 0x10),
-                              (Space { piece: Piece::Pawn(1, false), side: Side::White }, 0x11), (Space { piece: Piece::Pawn(2, false), side: Side::White }, 0x12), (Space { piece: Piece::Pawn(3, false), side: Side::White }, 0x13),
-                              (Space { piece: Piece::Pawn(4, false), side: Side::White }, 0x14), (Space { piece: Piece::Pawn(5, false), side: Side::White }, 0x15), (Space { piece: Piece::Pawn(6, false), side: Side::White }, 0x16),
-                              (Space { piece: Piece::Pawn(7, false), side: Side::White }, 0x17)]),
-        black: HashMap::from([(Space { piece: Piece::Rook(false), side: Side::Black }, 0x70), (Space { piece: Piece::Knight(false), side: Side::Black }, 0x71), (Space { piece: Piece::Bishop(false), side: Side::Black }, 0x72),
-                              (Space { piece: Piece::Queen, side: Side::Black }, 0x73), (Space { piece: Piece::King, side: Side::Black }, 0x74), (Space { piece: Piece::Bishop(true), side: Side::Black }, 0x75),
-                              (Space { piece: Piece::Knight(true), side: Side::Black }, 0x76), (Space { piece: Piece::Rook(true), side: Side::Black }, 0x77), (Space { piece: Piece::Pawn(0, false), side: Side::Black }, 0x60),
-                              (Space { piece: Piece::Pawn(1, false), side: Side::Black }, 0x61), (Space { piece: Piece::Pawn(2, false), side: Side::Black }, 0x62), (Space { piece: Piece::Pawn(3, false), side: Side::Black }, 0x63),
-                              (Space { piece: Piece::Pawn(4, false), side: Side::Black }, 0x64), (Space { piece: Piece::Pawn(5, false), side: Side::Black }, 0x65), (Space { piece: Piece::Pawn(6, false), side: Side::Black }, 0x66),
-                              (Space { piece: Piece::Pawn(7, false), side: Side::Black }, 0x67)]),
+        white: HashMap::from([(Piece::Rook(false), 0x00), (Piece::Knight(false), 0x01), (Piece::Bishop(false), 0x02),
+                              (Piece::Queen, 0x03), (Piece::King, 0x04), (Piece::Bishop(true), 0x05),
+                              (Piece::Knight(true), 0x06), (Piece::Rook(true), 0x07), (Piece::Pawn(0, false), 0x10),
+                              (Piece::Pawn(1, false), 0x11), (Piece::Pawn(2, false), 0x12), (Piece::Pawn(3, false), 0x13),
+                              (Piece::Pawn(4, false), 0x14), (Piece::Pawn(5, false), 0x15), (Piece::Pawn(6, false), 0x16),
+                              (Piece::Pawn(7, false), 0x17)]),
+        black: HashMap::from([(Piece::Rook(false), 0x70), (Piece::Knight(false), 0x71), (Piece::Bishop(false), 0x72),
+                              (Piece::Queen, 0x73), (Piece::King, 0x74), (Piece::Bishop(true), 0x75),
+                              (Piece::Knight(true), 0x76), (Piece::Rook(true), 0x77), (Piece::Pawn(0, false), 0x60),
+                              (Piece::Pawn(1, false), 0x61), (Piece::Pawn(2, false), 0x62), (Piece::Pawn(3, false), 0x63),
+                              (Piece::Pawn(4, false), 0x64), (Piece::Pawn(5, false), 0x65), (Piece::Pawn(6, false), 0x66),
+                              (Piece::Pawn(7, false), 0x67)]),
     }
     }
 
@@ -128,8 +128,8 @@ impl Game {
             &self.black
         };
 
-        for (space, position) in side {
-            match space.piece {
+        for (piece, position) in side {
+            match piece {
                 Piece::King => self.generate_king_moves(&mut moves, *position, 0),
                 Piece::Queen => self.generate_queen_moves(&mut moves, *position, 0),
                 Piece::Rook(_) => self.generate_rook_moves(&mut moves, *position, 0),
@@ -512,9 +512,9 @@ impl Game {
             Side::White => (&mut new_board.white, &mut new_board.black),
             Side::Black => (&mut new_board.black, &mut new_board.white),
         };
-        me.insert(new_board.board[src].unwrap(), dest);
+        me.insert(new_board.board[src].unwrap().piece, dest);
         if let Some(space) = new_board.board[dest] {
-            opponent.remove(&space);
+            opponent.remove(&space.piece);
         }
 
         // Update board array
@@ -564,13 +564,7 @@ mod tests {
         // Move black queen to G6
         let game = game.make_move(0x73, 0x55, BLACK_QUEEN);
 
-        assert_eq!(
-            0x55,
-            game.black[&Space {
-                piece: Piece::Queen,
-                side: Side::Black
-            }]
-        );
+        assert_eq!(0x55, game.black[&Piece::Queen]);
         assert_eq!(None, game.board[0x73]);
         assert_eq!(queen, game.board[0x55]);
     }
@@ -583,13 +577,7 @@ mod tests {
         // Move white queen to G6
         let game = game.make_move(0x03, 0x55, WHITE_QUEEN);
 
-        assert_eq!(
-            0x55,
-            game.white[&Space {
-                piece: Piece::Queen,
-                side: Side::White
-            }]
-        );
+        assert_eq!(0x55, game.white[&Piece::Queen]);
         assert_eq!(None, game.board[0x03]);
         assert_eq!(queen, game.board[0x55]);
     }
@@ -605,7 +593,7 @@ mod tests {
         assert_eq!(0x13, game.pieces[BLACK_QUEEN]);
         assert_eq!(None, game.board[0x73]);
         assert_eq!(queen, game.board[0x13]);
-        assert!(!game.white.contains_key(&Space{side: Side::White, piece: Piece::Pawn(3, false)}))
+        assert!(!game.white.contains_key(&Piece::Pawn(3, false)))
     }
 
     #[test]
@@ -717,7 +705,7 @@ mod tests {
 
         game.generate_bishop_moves(
             &mut moves,
-            game.pieces[WHITE_KING_BISHOP],
+            game.white[&Piece::Bishop(true)],
             WHITE_KING_BISHOP,
         );
         assert_eq!(8, moves.len());
