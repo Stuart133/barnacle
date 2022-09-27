@@ -436,7 +436,13 @@ impl Game {
         });
     }
 
-    fn make_sliding_moves(&self, moves: &mut Vec<Game>, src: usize, index: usize, src_exp: fn(usize) -> usize) {
+    fn make_sliding_moves(
+        &self,
+        moves: &mut Vec<Game>,
+        src: usize,
+        index: usize,
+        src_exp: fn(usize) -> usize,
+    ) {
         let mut dest = src;
         loop {
             dest = src_exp(dest);
@@ -472,7 +478,7 @@ impl Game {
     ) {
         let src2 = self.pieces[index];
         if src2 != src {
-            println!("UH OH");  // Well fuck
+            println!("UH OH"); // Well fuck
         }
 
         if dest & 0x88 == 0 {
@@ -501,7 +507,7 @@ impl Game {
     }
 
     #[inline(always)]
-    fn make_move(&self, src: usize, dest: usize, index: usize,) -> Game {
+    fn make_move(&self, src: usize, dest: usize, index: usize) -> Game {
         let mut new_board = self.clone();
         new_board.board[dest] = new_board.board[src];
         new_board.board[src] = None;
@@ -752,7 +758,11 @@ mod tests {
         // Move knight to A5
         let game = Game::new().make_move(0x02, 0x40, WHITE_KING_KNIGHT);
 
-        game.generate_knight_moves(&mut moves, game.pieces[WHITE_KING_KNIGHT], WHITE_KING_KNIGHT);
+        game.generate_knight_moves(
+            &mut moves,
+            game.pieces[WHITE_KING_KNIGHT],
+            WHITE_KING_KNIGHT,
+        );
         assert_eq!(4, moves.len());
     }
 
@@ -800,132 +810,94 @@ mod tests {
 
     #[test]
     pub fn pawn_moves_blocked_friendly_front() {
-        let mut board = Game::new();
         let mut moves = vec![];
 
-        // Place pawn on D5
-        board.board[67] = Some(Space {
-            piece: Piece::Pawn(false),
-            side: Side::White,
-        });
-        // Place pawn on D6
-        board.board[83] = Some(Space {
-            piece: Piece::Pawn(false),
-            side: Side::White,
-        });
+        // Move white pawn to D5 & white pawn to D6
+        let game =
+            Game::new()
+                .make_move(0x13, 0x43, WHITE_PAWN_D)
+                .make_move(0x14, 0x53, WHITE_PAWN_E);
 
-        board.generate_pawn_moves(&mut moves, 67, WHITE_PAWN_D);
+        game.generate_pawn_moves(&mut moves, game.pieces[WHITE_PAWN_D], WHITE_PAWN_D);
         assert_eq!(0, moves.len());
     }
 
     #[test]
     pub fn pawn_moves_blocked_enemy_front() {
-        let mut board = Game::new();
         let mut moves = vec![];
 
-        // Place pawn on D5
-        board.board[67] = Some(Space {
-            piece: Piece::Pawn(false),
-            side: Side::White,
-        });
-        // Place pawn on D6
-        board.board[83] = Some(Space {
-            piece: Piece::Pawn(false),
-            side: Side::Black,
-        });
+        // Move white pawn to D5 & black pawn to D6
+        let game =
+            Game::new()
+                .make_move(0x13, 0x43, WHITE_PAWN_D)
+                .make_move(0x63, 0x53, BLACK_PAWN_D);
 
-        board.generate_pawn_moves(&mut moves, 67, WHITE_PAWN_D);
+        game.generate_pawn_moves(&mut moves, game.pieces[WHITE_PAWN_D], WHITE_PAWN_D);
         assert_eq!(0, moves.len());
     }
 
     #[test]
     pub fn pawn_moves_capture_front() {
-        let mut board = Game::new();
         let mut moves = vec![];
 
-        // Place pawn on D6
-        board.board[0x53] = Some(Space {
-            piece: Piece::Pawn(false),
-            side: Side::White,
-        });
+        // Move white pawn to D6
+        let game = Game::new().make_move(0x13, 0x53, WHITE_PAWN_D);
 
-        board.generate_pawn_moves(&mut moves, 0x53, WHITE_PAWN_D);
+        game.generate_pawn_moves(&mut moves, game.pieces[WHITE_PAWN_D], WHITE_PAWN_D);
         assert_eq!(2, moves.len());
     }
 
     #[test]
     pub fn king_not_in_check_from_start() {
-        let board = Game::new();
+        let game = Game::new();
 
         // E1
-        assert!(!board.king_check(Side::White, 0x04));
+        assert!(!game.king_check(Side::White, game.pieces[WHITE_KING]));
 
         // E8
-        assert!(!board.king_check(Side::Black, 0x74));
+        assert!(!game.king_check(Side::Black, game.pieces[BLACK_KING]));
     }
 
     #[test]
     pub fn king_in_check_from_bishop() {
-        let mut board = Game::new();
+        // Move white king to D4 & black bishop to B6
+        let game =
+            Game::new()
+                .make_move(0x04, 0x33, WHITE_KING)
+                .make_move(0x75, 0x51, BLACK_QUEEN_BISHOP);
 
-        // King at D4
-        board.board[0x33] = Some(Space {
-            piece: Piece::King,
-            side: Side::White,
-        });
-        // Bishop on B6
-        board.board[0x51] = Some(Space {
-            piece: Piece::Bishop,
-            side: Side::Black,
-        });
-
-        // E8
-        assert!(board.king_check(Side::White, 0x33));
+        assert!(game.king_check(Side::White, game.pieces[WHITE_KING]));
     }
 
     #[test]
     pub fn king_in_check_from_pawn() {
-        let mut board = Game::new();
+        // Move white king to D4 & black pawn to C5
+        let game =
+            Game::new()
+                .make_move(0x04, 0x33, WHITE_KING)
+                .make_move(0x67, 0x42, BLACK_PAWN_H);
 
-        // King at D4
-        board.board[0x33] = Some(Space {
-            piece: Piece::King,
-            side: Side::White,
-        });
-        // Pawn on C5
-        board.board[0x42] = Some(Space {
-            piece: Piece::Pawn(false),
-            side: Side::Black,
-        });
-
-        // E8
-        assert!(board.king_check(Side::White, 0x33));
+        assert!(game.king_check(Side::White, game.pieces[WHITE_KING]));
     }
 
     #[test]
     pub fn black_king_in_check_from_pawn() {
-        let mut board = Game::new();
+        // Move black king to D4 & white pawn to E3
+        let game =
+            Game::new()
+                .make_move(0x74, 0x33, BLACK_KING)
+                .make_move(0x16, 0x24, WHITE_PAWN_G);
 
-        // King at D4
-        board.board[0x33] = Some(Space {
-            piece: Piece::King,
-            side: Side::Black,
-        });
-        // Pawn on E3
-        board.board[0x24] = Some(Space {
-            piece: Piece::Pawn(false),
-            side: Side::White,
-        });
-
-        // E8
-        assert!(board.king_check(Side::Black, 0x33));
+        assert!(game.king_check(Side::Black, game.pieces[BLACK_KING]));
     }
 
     #[test]
     pub fn king_in_check_from_rook() {
         // Move white king to D4 & black rook to H4
-        let game = Game::new().make_move(0x03, 0x33, WHITE_KING)
-            .make_move(0x70, 0x37, BLACK_KING_ROOK);
+        let game =
+            Game::new()
+                .make_move(0x04, 0x33, WHITE_KING)
+                .make_move(0x70, 0x37, BLACK_KING_ROOK);
 
         assert!(game.king_check(Side::White, game.pieces[WHITE_KING]));
     }
