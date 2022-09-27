@@ -22,3 +22,4 @@ fn main() {
 
 // 256 bytes for a simple repr
 // 300 bytes is the copy limit perhaps?
+// 616 bytes for array & map combo

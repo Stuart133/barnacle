@@ -52,7 +52,7 @@ pub enum Piece {
     Rook(bool),     // True if king rook
     Knight(bool),   // True if king knight
     Bishop(bool),   // True if king bishop
-    Pawn(u8, bool), // Store the pawn file & en passent status
+    Pawn(u8), // Store the pawn file
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -70,7 +70,6 @@ pub struct Space {
 #[derive(Clone, Debug)]
 pub struct Game {
     board: [Option<Space>; 128], // TODO: Look into bijective map to replace this
-    pieces: [usize; 32],
     white: HashMap<Piece, usize>,
     black: HashMap<Piece, usize>,
     white_check: bool,
@@ -86,36 +85,35 @@ impl Game {
             Some(Space { piece: Piece::Queen, side: Side::White }), Some(Space { piece: Piece::King, side: Side::White }), Some(Space { piece: Piece::Bishop(true), side: Side::White }),
             Some(Space { piece: Piece::Knight(true), side: Side::White }), Some(Space { piece: Piece::Rook(true), side: Side::White }), None, None, None, None, None, None, None, None,
             // Rank 2
-            Some(Space { piece: Piece::Pawn(0, false), side: Side::White }), Some(Space { piece: Piece::Pawn(1, false), side: Side::White }), Some(Space { piece: Piece::Pawn(2, false), side: Side::White }),
-            Some(Space { piece: Piece::Pawn(3, false), side: Side::White }), Some(Space { piece: Piece::Pawn(4, false), side: Side::White }), Some(Space { piece: Piece::Pawn(5, false), side: Side::White }),
-            Some(Space { piece: Piece::Pawn(6, false), side: Side::White }), Some(Space { piece: Piece::Pawn(7, false), side: Side::White }), None, None, None, None, None, None, None, None,
+            Some(Space { piece: Piece::Pawn(0), side: Side::White }), Some(Space { piece: Piece::Pawn(1), side: Side::White }), Some(Space { piece: Piece::Pawn(2), side: Side::White }),
+            Some(Space { piece: Piece::Pawn(3), side: Side::White }), Some(Space { piece: Piece::Pawn(4), side: Side::White }), Some(Space { piece: Piece::Pawn(5), side: Side::White }),
+            Some(Space { piece: Piece::Pawn(6), side: Side::White }), Some(Space { piece: Piece::Pawn(7), side: Side::White }), None, None, None, None, None, None, None, None,
             // Rank 3 - 6
             None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
             None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
             None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
             None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
             // Rank 7
-            Some(Space { piece: Piece::Pawn(0, false), side: Side::Black }), Some(Space { piece: Piece::Pawn(1, false), side: Side::Black }), Some(Space { piece: Piece::Pawn(2, false), side: Side::Black }),
-            Some(Space { piece: Piece::Pawn(3, false), side: Side::Black }), Some(Space { piece: Piece::Pawn(4, false), side: Side::Black }), Some(Space { piece: Piece::Pawn(5, false), side: Side::Black }),
-            Some(Space { piece: Piece::Pawn(6, false), side: Side::Black }), Some(Space { piece: Piece::Pawn(7, false), side: Side::Black }), None, None, None, None, None, None, None, None,
+            Some(Space { piece: Piece::Pawn(0), side: Side::Black }), Some(Space { piece: Piece::Pawn(1), side: Side::Black }), Some(Space { piece: Piece::Pawn(2), side: Side::Black }),
+            Some(Space { piece: Piece::Pawn(3), side: Side::Black }), Some(Space { piece: Piece::Pawn(4), side: Side::Black }), Some(Space { piece: Piece::Pawn(5), side: Side::Black }),
+            Some(Space { piece: Piece::Pawn(6), side: Side::Black }), Some(Space { piece: Piece::Pawn(7), side: Side::Black }), None, None, None, None, None, None, None, None,
             // Rank 8 
             Some(Space { piece: Piece::Rook(false), side: Side::Black }), Some(Space { piece: Piece::Knight(false), side: Side::Black }), Some(Space { piece: Piece::Bishop(false), side: Side::Black }),
             Some(Space { piece: Piece::Queen, side: Side::Black }), Some(Space { piece: Piece::King, side: Side::Black }), Some(Space { piece: Piece::Bishop(true), side: Side::Black }),
             Some(Space { piece: Piece::Knight(true), side: Side::Black }), Some(Space { piece: Piece::Rook(true), side: Side::Black }), None, None, None, None, None, None, None, None,
         ], white_check: false, black_check: false, 
-        pieces: [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67],
         white: HashMap::from([(Piece::Rook(false), 0x00), (Piece::Knight(false), 0x01), (Piece::Bishop(false), 0x02),
                               (Piece::Queen, 0x03), (Piece::King, 0x04), (Piece::Bishop(true), 0x05),
-                              (Piece::Knight(true), 0x06), (Piece::Rook(true), 0x07), (Piece::Pawn(0, false), 0x10),
-                              (Piece::Pawn(1, false), 0x11), (Piece::Pawn(2, false), 0x12), (Piece::Pawn(3, false), 0x13),
-                              (Piece::Pawn(4, false), 0x14), (Piece::Pawn(5, false), 0x15), (Piece::Pawn(6, false), 0x16),
-                              (Piece::Pawn(7, false), 0x17)]),
+                              (Piece::Knight(true), 0x06), (Piece::Rook(true), 0x07), (Piece::Pawn(0), 0x10),
+                              (Piece::Pawn(1), 0x11), (Piece::Pawn(2), 0x12), (Piece::Pawn(3), 0x13),
+                              (Piece::Pawn(4), 0x14), (Piece::Pawn(5), 0x15), (Piece::Pawn(6), 0x16),
+                              (Piece::Pawn(7), 0x17)]),
         black: HashMap::from([(Piece::Rook(false), 0x70), (Piece::Knight(false), 0x71), (Piece::Bishop(false), 0x72),
                               (Piece::Queen, 0x73), (Piece::King, 0x74), (Piece::Bishop(true), 0x75),
-                              (Piece::Knight(true), 0x76), (Piece::Rook(true), 0x77), (Piece::Pawn(0, false), 0x60),
-                              (Piece::Pawn(1, false), 0x61), (Piece::Pawn(2, false), 0x62), (Piece::Pawn(3, false), 0x63),
-                              (Piece::Pawn(4, false), 0x64), (Piece::Pawn(5, false), 0x65), (Piece::Pawn(6, false), 0x66),
-                              (Piece::Pawn(7, false), 0x67)]),
+                              (Piece::Knight(true), 0x76), (Piece::Rook(true), 0x77), (Piece::Pawn(0), 0x60),
+                              (Piece::Pawn(1), 0x61), (Piece::Pawn(2), 0x62), (Piece::Pawn(3), 0x63),
+                              (Piece::Pawn(4), 0x64), (Piece::Pawn(5), 0x65), (Piece::Pawn(6), 0x66),
+                              (Piece::Pawn(7), 0x67)]),
     }
     }
 
@@ -135,7 +133,7 @@ impl Game {
                 Piece::Rook(_) => self.generate_rook_moves(&mut moves, *position, 0),
                 Piece::Knight(_) => self.generate_knight_moves(&mut moves, *position, 0),
                 Piece::Bishop(_) => self.generate_bishop_moves(&mut moves, *position, 0),
-                Piece::Pawn(_, _) => self.generate_pawn_moves(&mut moves, *position, 0),
+                Piece::Pawn(_) => self.generate_pawn_moves(&mut moves, *position, 0),
             }
         }
 
@@ -167,7 +165,7 @@ impl Game {
             // Detect black attacking pawns - which from above
             if side == Side::White {
                 if let Some(Space {
-                    piece: Piece::Pawn(_, _),
+                    piece: Piece::Pawn(_),
                     side: Side::Black,
                 }) = self.board[position + offset]
                 {
@@ -180,7 +178,7 @@ impl Game {
             } else {
                 if let Some(attack) = position.checked_sub(*offset) {
                     if let Some(Space {
-                        piece: Piece::Pawn(_, _),
+                        piece: Piece::Pawn(_),
                         side: Side::White,
                     }) = self.board[attack]
                     {
@@ -505,7 +503,7 @@ impl Game {
         let mut new_board = self.clone();
 
         // TODO: Remove me
-        new_board.pieces[index] = dest;
+        // new_board.pieces[index] = dest;
 
         // Update piece hashmaps
         let (me, opponent) = match new_board.board[src].unwrap().side {
@@ -590,10 +588,10 @@ mod tests {
         // Move black queen to D2
         let game = game.make_move(0x73, 0x13, BLACK_QUEEN);
 
-        assert_eq!(0x13, game.pieces[BLACK_QUEEN]);
+        assert_eq!(0x13, game.black[&Piece::Queen]);
         assert_eq!(None, game.board[0x73]);
         assert_eq!(queen, game.board[0x13]);
-        assert!(!game.white.contains_key(&Piece::Pawn(3, false)))
+        assert!(!game.white.contains_key(&Piece::Pawn(3)))
     }
 
     #[test]
@@ -602,10 +600,10 @@ mod tests {
         let mut moves = vec![];
 
         // E1
-        game.generate_king_moves(&mut moves, game.pieces[WHITE_KING], WHITE_KING);
+        game.generate_king_moves(&mut moves, game.white[&Piece::King], WHITE_KING);
         assert_eq!(0, moves.len());
         // E8
-        game.generate_king_moves(&mut moves, game.pieces[BLACK_KING], BLACK_KING);
+        game.generate_king_moves(&mut moves, game.black[&Piece::King], BLACK_KING);
         assert_eq!(0, moves.len());
     }
 
@@ -619,7 +617,7 @@ mod tests {
                 .make_move(0x04, 0x34, WHITE_KING)
                 .make_move(0x64, 0x44, BLACK_PAWN_E);
 
-        game.generate_king_moves(&mut moves, game.pieces[WHITE_KING], WHITE_KING);
+        game.generate_king_moves(&mut moves, game.white[&Piece::King], WHITE_KING);
         assert_eq!(6, moves.len());
     }
 
@@ -633,7 +631,7 @@ mod tests {
             .make_move(0x62, 0x42, BLACK_PAWN_C)
             .make_move(0x75, 0x62, BLACK_KING_BISHOP);
 
-        game.generate_king_moves(&mut moves, game.pieces[WHITE_KING], WHITE_KING);
+        game.generate_king_moves(&mut moves, game.white[&Piece::King], WHITE_KING);
         assert_eq!(3, moves.len());
     }
 
@@ -643,10 +641,10 @@ mod tests {
         let mut moves = vec![];
 
         // D1
-        game.generate_queen_moves(&mut moves, game.pieces[WHITE_QUEEN], WHITE_QUEEN);
+        game.generate_queen_moves(&mut moves, game.white[&Piece::Queen], WHITE_QUEEN);
         assert_eq!(0, moves.len());
         // D8
-        game.generate_queen_moves(&mut moves, game.pieces[BLACK_QUEEN], BLACK_QUEEN);
+        game.generate_queen_moves(&mut moves, game.black[&Piece::Queen], BLACK_QUEEN);
         assert_eq!(0, moves.len());
     }
 
@@ -657,7 +655,7 @@ mod tests {
         // Move white queen to D5
         let game = Game::new().make_move(0x03, 0x43, WHITE_QUEEN);
 
-        game.generate_queen_moves(&mut moves, game.pieces[WHITE_QUEEN], WHITE_QUEEN);
+        game.generate_queen_moves(&mut moves, game.white[&Piece::Queen], WHITE_QUEEN);
         assert_eq!(19, moves.len());
     }
 
@@ -669,28 +667,28 @@ mod tests {
         // C1
         game.generate_bishop_moves(
             &mut moves,
-            game.pieces[WHITE_QUEEN_BISHOP],
+            game.white[&Piece::Bishop(false)],
             WHITE_QUEEN_BISHOP,
         );
         assert_eq!(0, moves.len());
         // F1
         game.generate_bishop_moves(
             &mut moves,
-            game.pieces[WHITE_KING_BISHOP],
+            game.white[&Piece::Bishop(true)],
             WHITE_KING_BISHOP,
         );
         assert_eq!(0, moves.len());
         // C8
         game.generate_bishop_moves(
             &mut moves,
-            game.pieces[BLACK_QUEEN_BISHOP],
+            game.black[&Piece::Bishop(false)],
             BLACK_QUEEN_BISHOP,
         );
         assert_eq!(0, moves.len());
         // F8
         game.generate_bishop_moves(
             &mut moves,
-            game.pieces[BLACK_KING_BISHOP],
+            game.black[&Piece::Bishop(true)],
             BLACK_KING_BISHOP,
         );
         assert_eq!(0, moves.len());
@@ -720,7 +718,7 @@ mod tests {
 
         game.generate_bishop_moves(
             &mut moves,
-            game.pieces[WHITE_KING_BISHOP],
+            game.white[&Piece::Bishop(true)],
             WHITE_KING_BISHOP,
         );
         assert_eq!(6, moves.len());
@@ -732,16 +730,16 @@ mod tests {
         let mut moves = vec![];
 
         // A1
-        game.generate_rook_moves(&mut moves, game.pieces[WHITE_QUEEN_ROOK], WHITE_QUEEN_ROOK);
+        game.generate_rook_moves(&mut moves, game.white[&Piece::Rook(false)], WHITE_QUEEN_ROOK);
         assert_eq!(0, moves.len());
         // H1
-        game.generate_rook_moves(&mut moves, game.pieces[WHITE_KING_ROOK], WHITE_KING_ROOK);
+        game.generate_rook_moves(&mut moves, game.white[&Piece::Rook(true)], WHITE_KING_ROOK);
         assert_eq!(0, moves.len());
         // A8
-        game.generate_rook_moves(&mut moves, game.pieces[BLACK_QUEEN_ROOK], BLACK_QUEEN_ROOK);
+        game.generate_rook_moves(&mut moves, game.black[&Piece::Rook(false)], BLACK_QUEEN_ROOK);
         assert_eq!(0, moves.len());
         // H8
-        game.generate_rook_moves(&mut moves, game.pieces[BLACK_KING_ROOK], BLACK_KING_ROOK);
+        game.generate_rook_moves(&mut moves, game.black[&Piece::Rook(true)], BLACK_KING_ROOK);
         assert_eq!(0, moves.len());
     }
 
@@ -752,7 +750,7 @@ mod tests {
         // Move white rook to D5
         let game = Game::new().make_move(0x00, 0x43, WHITE_QUEEN_ROOK);
 
-        game.generate_rook_moves(&mut moves, game.pieces[WHITE_QUEEN_ROOK], WHITE_QUEEN_ROOK);
+        game.generate_rook_moves(&mut moves, game.white[&Piece::Rook(false)], WHITE_QUEEN_ROOK);
         assert_eq!(11, moves.len());
     }
 
@@ -764,28 +762,28 @@ mod tests {
         // B1
         game.generate_knight_moves(
             &mut moves,
-            game.pieces[WHITE_QUEEN_KNIGHT],
+            game.white[&Piece::Knight(false)],
             WHITE_QUEEN_KNIGHT,
         );
         assert_eq!(2, moves.len());
         // G1
         game.generate_knight_moves(
             &mut moves,
-            game.pieces[WHITE_KING_KNIGHT],
+            game.white[&Piece::Knight(true)],
             WHITE_KING_KNIGHT,
         );
         assert_eq!(4, moves.len());
         // B8
         game.generate_knight_moves(
             &mut moves,
-            game.pieces[BLACK_QUEEN_KNIGHT],
+            game.black[&Piece::Knight(false)],
             BLACK_QUEEN_KNIGHT,
         );
         assert_eq!(6, moves.len());
         // G8
         game.generate_knight_moves(
             &mut moves,
-            game.pieces[BLACK_KING_KNIGHT],
+            game.black[&Piece::Knight(true)],
             BLACK_KING_KNIGHT,
         );
         assert_eq!(8, moves.len());
@@ -796,11 +794,11 @@ mod tests {
         let mut moves = vec![];
 
         // Move white knight to D5
-        let game = Game::new().make_move(0x02, 0x43, WHITE_QUEEN_KNIGHT);
+        let game = Game::new().make_move(0x01, 0x43, WHITE_QUEEN_KNIGHT);
 
         game.generate_knight_moves(
             &mut moves,
-            game.pieces[WHITE_QUEEN_KNIGHT],
+            game.white[&Piece::Knight(false)],
             WHITE_QUEEN_KNIGHT,
         );
         assert_eq!(8, moves.len());
@@ -811,11 +809,11 @@ mod tests {
         let mut moves = vec![];
 
         // Move white knight to A5
-        let game = Game::new().make_move(0x02, 0x40, WHITE_QUEEN_KNIGHT);
+        let game = Game::new().make_move(0x01, 0x40, WHITE_QUEEN_KNIGHT);
 
         game.generate_knight_moves(
             &mut moves,
-            game.pieces[WHITE_QUEEN_KNIGHT],
+            game.white[&Piece::Knight(false)],
             WHITE_QUEEN_KNIGHT,
         );
         assert_eq!(4, moves.len());
@@ -827,16 +825,16 @@ mod tests {
         let mut moves = vec![];
 
         // A2
-        game.generate_pawn_moves(&mut moves, game.pieces[WHITE_PAWN_A], WHITE_PAWN_A);
+        game.generate_pawn_moves(&mut moves, game.white[&Piece::Pawn(0)], WHITE_PAWN_A);
         assert_eq!(2, moves.len());
         // E2
-        game.generate_pawn_moves(&mut moves, game.pieces[WHITE_PAWN_E], WHITE_PAWN_E);
+        game.generate_pawn_moves(&mut moves, game.white[&Piece::Pawn(4)], WHITE_PAWN_E);
         assert_eq!(4, moves.len());
         // B7
-        game.generate_pawn_moves(&mut moves, game.pieces[BLACK_PAWN_B], BLACK_PAWN_B);
+        game.generate_pawn_moves(&mut moves, game.black[&Piece::Pawn(1)], BLACK_PAWN_B);
         assert_eq!(6, moves.len());
         // G7
-        game.generate_pawn_moves(&mut moves, game.pieces[BLACK_PAWN_G], BLACK_PAWN_G);
+        game.generate_pawn_moves(&mut moves, game.black[&Piece::Pawn(6)], BLACK_PAWN_G);
         assert_eq!(8, moves.len());
     }
 
@@ -850,10 +848,10 @@ mod tests {
                 .make_move(0x13, 0x33, WHITE_PAWN_D)
                 .make_move(0x62, 0x42, BLACK_PAWN_C);
 
-        game.generate_pawn_moves(&mut moves, game.pieces[WHITE_PAWN_D], WHITE_PAWN_D);
+        game.generate_pawn_moves(&mut moves, game.white[&Piece::Pawn(3)], WHITE_PAWN_D);
         assert_eq!(2, moves.len());
 
-        game.generate_pawn_moves(&mut moves, game.pieces[BLACK_PAWN_C], BLACK_PAWN_C);
+        game.generate_pawn_moves(&mut moves, game.black[&Piece::Pawn(2)], BLACK_PAWN_C);
         assert_eq!(4, moves.len());
     }
 
@@ -867,7 +865,7 @@ mod tests {
                 .make_move(0x13, 0x43, WHITE_PAWN_D)
                 .make_move(0x14, 0x53, WHITE_PAWN_E);
 
-        game.generate_pawn_moves(&mut moves, game.pieces[WHITE_PAWN_D], WHITE_PAWN_D);
+        game.generate_pawn_moves(&mut moves, game.white[&Piece::Pawn(3)], WHITE_PAWN_D);
         assert_eq!(0, moves.len());
     }
 
@@ -881,7 +879,7 @@ mod tests {
                 .make_move(0x13, 0x43, WHITE_PAWN_D)
                 .make_move(0x63, 0x53, BLACK_PAWN_D);
 
-        game.generate_pawn_moves(&mut moves, game.pieces[WHITE_PAWN_D], WHITE_PAWN_D);
+        game.generate_pawn_moves(&mut moves, game.white[&Piece::Pawn(3)], WHITE_PAWN_D);
         assert_eq!(0, moves.len());
     }
 
@@ -892,7 +890,7 @@ mod tests {
         // Move white pawn to D6
         let game = Game::new().make_move(0x13, 0x53, WHITE_PAWN_D);
 
-        game.generate_pawn_moves(&mut moves, game.pieces[WHITE_PAWN_D], WHITE_PAWN_D);
+        game.generate_pawn_moves(&mut moves, game.white[&Piece::Pawn(3)], WHITE_PAWN_D);
         assert_eq!(2, moves.len());
     }
 
@@ -901,10 +899,10 @@ mod tests {
         let game = Game::new();
 
         // E1
-        assert!(!game.king_check(Side::White, game.pieces[WHITE_KING]));
+        assert!(!game.king_check(Side::White, game.white[&Piece::King]));
 
         // E8
-        assert!(!game.king_check(Side::Black, game.pieces[BLACK_KING]));
+        assert!(!game.king_check(Side::Black, game.black[&Piece::King]));
     }
 
     #[test]
@@ -915,7 +913,7 @@ mod tests {
                 .make_move(0x04, 0x33, WHITE_KING)
                 .make_move(0x75, 0x51, BLACK_KING_BISHOP);
 
-        assert!(game.king_check(Side::White, game.pieces[WHITE_KING]));
+        assert!(game.king_check(Side::White, game.white[&Piece::King]));
     }
 
     #[test]
@@ -926,7 +924,7 @@ mod tests {
                 .make_move(0x04, 0x33, WHITE_KING)
                 .make_move(0x67, 0x42, BLACK_PAWN_H);
 
-        assert!(game.king_check(Side::White, game.pieces[WHITE_KING]));
+        assert!(game.king_check(Side::White, game.white[&Piece::King]));
     }
 
     #[test]
@@ -937,7 +935,7 @@ mod tests {
                 .make_move(0x74, 0x33, BLACK_KING)
                 .make_move(0x16, 0x24, WHITE_PAWN_G);
 
-        assert!(game.king_check(Side::Black, game.pieces[BLACK_KING]));
+        assert!(game.king_check(Side::Black, game.black[&Piece::King]));
     }
 
     #[test]
@@ -948,6 +946,6 @@ mod tests {
                 .make_move(0x04, 0x33, WHITE_KING)
                 .make_move(0x70, 0x37, BLACK_QUEEN_ROOK);
 
-        assert!(game.king_check(Side::White, game.pieces[WHITE_KING]));
+        assert!(game.king_check(Side::White, game.white[&Piece::King]));
     }
 }
