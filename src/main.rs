@@ -11,7 +11,6 @@ use std::mem::size_of;
 use game::{Game, Side};
 
 mod game;
-mod fen;
 
 fn main() {
     let board = Game::new();

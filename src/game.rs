@@ -91,7 +91,17 @@ impl Game {
 
     // Create a new game object, using A Forsyth–Edwards Notation string
     pub fn from_fen(raw_game: String) -> Game {
-        let mut game = Self::new();
+        let mut game = Game {
+            board: [None; 128],
+            white: Player {
+                pieces: HashMap::new(),
+                check: false,
+            },
+            black: Player {
+                pieces: HashMap::new(),
+                check: false,
+            },
+        };
         let mut fen = raw_game.split(" ");
 
         let mut white_pawn = 0;
@@ -104,7 +114,6 @@ impl Game {
         let mut black_rook = false;
         let mut space = 0x70;
         for rune in fen.next().unwrap().chars() {
-            println!("{} {:#02x}", rune, space);
             match rune {
                 'P' => {
                     game.board[space] = Some(Space {
@@ -211,6 +220,8 @@ impl Game {
             space += 1;
         }
 
+        game.white.check = game.king_check(Side::White, game.white.pieces[&Piece::King]);
+        game.black.check = game.king_check(Side::Black, game.black.pieces[&Piece::King]);
         game
     }
 
@@ -303,12 +314,10 @@ impl Game {
         val: bool,
         offset: &usize,
     ) -> bool {
-        if position + offset * 0x88 == 0 {
+        if position + offset & 0x88 == 0 {
             if let Some(space) = self.board[position + offset] {
                 if space.side != side && discriminant(&space.piece) == attack_piece {
                     return true;
-                } else {
-                    return false || val;
                 }
             }
         }
@@ -343,7 +352,7 @@ impl Game {
                     if space.side != side && discriminant(&space.piece) == attack_piece {
                         return true;
                     } else {
-                        return false || val;
+                        break;
                     }
                 }
             } else {
@@ -362,7 +371,7 @@ impl Game {
                     if space.side != side && discriminant(&space.piece) == attack_piece {
                         return true;
                     } else {
-                        return false || val;
+                        break;
                     }
                 }
             } else {
@@ -654,6 +663,30 @@ mod tests {
         }
     }
 
+    pub fn perft_in() {
+        let correct_values = [20, 400, 8982, 197281];
+
+        let board =
+            Game::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0".to_string());
+        let mut side = Side::White;
+        let mut moves = vec![board];
+
+        for value in correct_values {
+            let mut new_moves = vec![];
+            for m in moves.iter() {
+                new_moves.append(&mut m.generate_ply(side));
+            }
+
+            assert_eq!(value, new_moves.len());
+            moves = new_moves;
+            if side == Side::White {
+                side = Side::Black;
+            } else {
+                side = Side::White;
+            }
+        }
+    }
+
     #[test]
     pub fn parse_fen_matches_default() {
         let game = Game::new();
@@ -661,6 +694,43 @@ mod tests {
             Game::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0".to_string());
 
         assert_eq!(game.board, game_fen.board);
+    }
+
+    #[test]
+    pub fn parse_fen_with_inspection() {
+        let game = Game::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -".to_string());
+
+        assert_eq!(game.black.pieces[&Piece::Pawn(0)], 0x62);
+        assert_eq!(game.black.pieces[&Piece::Pawn(1)], 0x53);
+        assert_eq!(game.white.pieces[&Piece::King], 0x40);
+        assert_eq!(game.white.pieces[&Piece::Pawn(0)], 0x41);
+        assert_eq!(game.black.pieces[&Piece::Rook(false)], 0x47);
+        assert_eq!(game.white.pieces[&Piece::Rook(false)], 0x31);
+        assert_eq!(game.black.pieces[&Piece::Pawn(2)], 0x35);
+        assert_eq!(game.black.pieces[&Piece::King], 0x37);
+        assert_eq!(game.white.pieces[&Piece::Pawn(1)], 0x14);
+        assert_eq!(game.white.pieces[&Piece::Pawn(2)], 0x16);
+
+        assert_eq!(5, game.white.pieces.len());
+        assert_eq!(5, game.black.pieces.len());
+    }
+
+    #[test]
+    pub fn parse_fen_with_check() {
+        let game = Game::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/r7 w - -".to_string());
+
+        assert!(game.white.check);
+        assert!(!game.black.check);
+    }
+
+    #[test]
+    pub fn parse_fen_with_black_check() {
+        let game = Game::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/7R w - -".to_string());
+
+        assert_eq!(0x07, game.white.pieces[&Piece::Rook(true)]);
+        assert_eq!(0x37, game.black.pieces[&Piece::King]);
+        assert!(!game.white.check);
+        assert!(game.black.check);
     }
 
     #[test]
@@ -758,6 +828,20 @@ mod tests {
 
         game.generate_king_moves(&mut moves, game.white.pieces[&Piece::King]);
         assert_eq!(3, moves.len());
+    }
+
+    #[test]
+    pub fn king_moves_with_other_checks() {
+        let mut moves = vec![];
+
+        // Move white king to D4, white rook to B4, black rook to D6
+        let game = Game::new()
+            .make_move(0x04, 0x33)
+            .make_move(0x00, 0x31)
+            .make_move(0x70, 0x53);
+
+        game.generate_king_moves(&mut moves, game.white.pieces[&Piece::King]);
+        assert_eq!(7, moves.len());
     }
 
     #[test]
