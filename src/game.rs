@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    fmt::Display,
     mem::{discriminant, Discriminant},
 };
 
@@ -33,6 +34,29 @@ pub struct Space {
     side: Side,
 }
 
+impl Display for Space {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.side {
+            Side::White => match self.piece {
+                Piece::King => write!(f, "K"),
+                Piece::Queen => write!(f, "Q"),
+                Piece::Rook(_) => write!(f, "R"),
+                Piece::Knight(_) => write!(f, "N"),
+                Piece::Bishop(_) => write!(f, "B"),
+                Piece::Pawn(_) => write!(f, "P"),
+            },
+            Side::Black => match self.piece {
+                Piece::King => write!(f, "k"),
+                Piece::Queen => write!(f, "q"),
+                Piece::Rook(_) => write!(f, "r"),
+                Piece::Knight(_) => write!(f, "n"),
+                Piece::Bishop(_) => write!(f, "b"),
+                Piece::Pawn(_) => write!(f, "p"),
+            },
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Player {
     pieces: HashMap<Piece, usize>,
@@ -44,6 +68,24 @@ pub struct Game {
     board: [Option<Space>; 128], // TODO: Look into bijective map to replace this
     white: Player,
     black: Player,
+}
+
+impl Display for Game {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let res = writeln!(f, "  A B C D E F G H");
+        for i in (1..9).rev() {
+            write!(f, "{} ", i);
+            for j in 0..8 {
+                match self.board[j + ((i - 1) * 2) * 8] {
+                    Some(s) => write!(f, "{} ", s),
+                    None => write!(f, "  "),
+                };
+            }
+            write!(f, "\n");
+        }
+
+        res
+    }
 }
 
 impl Game {
@@ -386,9 +428,9 @@ impl Game {
     #[inline(always)]
     fn generate_king_moves(&self, moves: &mut Vec<Game>, src: usize) {
         [UP_RIGHT, UP, UP_LEFT, RIGHT].iter().for_each(|offset| {
-            self.make_checked_jump(moves, src, src + offset, Game::king_check);
+            self.make_jump_move(moves, src, src + offset);
             match src.checked_sub(*offset) {
-                Some(dest) => self.make_checked_jump(moves, src, dest, Game::king_check),
+                Some(dest) => self.make_jump_move(moves, src, dest),
                 None => {}
             }
         })
@@ -405,7 +447,9 @@ impl Game {
                 let dest = src + UP;
                 if dest & 0x88 == 0 {
                     if let None = self.board[dest] {
-                        moves.push(self.make_move(src, dest));
+                        if let Some(m) = self.make_move(src, dest) {
+                            moves.push(m)
+                        }
                     }
                 }
                 // If we're on the starting space, generate the two space move
@@ -413,7 +457,9 @@ impl Game {
                 if src >= 0x10 && src <= 0x17 {
                     let dest = src + UP + UP;
                     if let None = self.board[dest] {
-                        moves.push(self.make_move(src, dest));
+                        if let Some(m) = self.make_move(src, dest) {
+                            moves.push(m)
+                        }
                     }
                 }
                 let dest = src + UP_RIGHT;
@@ -422,7 +468,9 @@ impl Game {
                         side: Side::Black, ..
                     }) = self.board[dest]
                     {
-                        moves.push(self.make_move(src, dest));
+                        if let Some(m) = self.make_move(src, dest) {
+                            moves.push(m)
+                        }
                     }
                 }
                 let dest = src + UP_LEFT;
@@ -431,7 +479,9 @@ impl Game {
                         side: Side::Black, ..
                     }) = self.board[dest]
                     {
-                        moves.push(self.make_move(src, dest));
+                        if let Some(m) = self.make_move(src, dest) {
+                            moves.push(m)
+                        }
                     }
                 }
             }
@@ -440,7 +490,9 @@ impl Game {
                     Some(dest) => {
                         if dest & 0x88 == 0 {
                             if let None = self.board[dest] {
-                                moves.push(self.make_move(src, dest));
+                                if let Some(m) = self.make_move(src, dest) {
+                                    moves.push(m)
+                                }
                             }
                         }
                     }
@@ -451,7 +503,9 @@ impl Game {
                 if src >= 0x60 && src <= 0x67 {
                     let dest = src - UP - UP;
                     if let None = self.board[dest] {
-                        moves.push(self.make_move(src, dest));
+                        if let Some(m) = self.make_move(src, dest) {
+                            moves.push(m)
+                        }
                     }
                 }
                 match src.checked_sub(UP_RIGHT) {
@@ -461,7 +515,9 @@ impl Game {
                                 side: Side::White, ..
                             }) = self.board[dest]
                             {
-                                moves.push(self.make_move(src, dest));
+                                if let Some(m) = self.make_move(src, dest) {
+                                    moves.push(m)
+                                }
                             }
                         }
                     }
@@ -474,7 +530,9 @@ impl Game {
                                 side: Side::White, ..
                             }) = self.board[dest]
                             {
-                                moves.push(self.make_move(src, dest));
+                                if let Some(m) = self.make_move(src, dest) {
+                                    moves.push(m)
+                                }
                             }
                         }
                     }
@@ -558,12 +616,16 @@ impl Game {
                                 .expect("sliding move called on empty space")
                                 .side
                         {
-                            moves.push(self.make_move(src, dest));
+                            if let Some(m) = self.make_move(src, dest) {
+                                moves.push(m)
+                            }
                         }
                         break;
                     }
                     None => {
-                        moves.push(self.make_move(src, dest));
+                        if let Some(m) = self.make_move(src, dest) {
+                            moves.push(m)
+                        }
                     }
                 }
             } else {
@@ -572,64 +634,81 @@ impl Game {
         }
     }
 
-    fn make_checked_jump(
-        &self,
-        moves: &mut Vec<Game>,
-        src: usize,
-        dest: usize,
-        check: fn(&Game, Side, usize) -> bool,
-    ) {
+    fn make_jump_move(&self, moves: &mut Vec<Game>, src: usize, dest: usize) {
         if dest & 0x88 == 0 {
-            if check(
-                self,
-                self.board[src]
-                    .expect("jump move called on empty space")
-                    .side,
-                dest,
-            ) {
-                return;
-            }
             match self.board[dest] {
                 Some(target) => {
                     if target.side != self.board[src].unwrap().side {
-                        moves.push(self.make_move(src, dest));
+                        if let Some(m) = self.make_move(src, dest) {
+                            moves.push(m)
+                        }
                     }
                 }
-                None => moves.push(self.make_move(src, dest)),
+                None => {
+                    if let Some(m) = self.make_move(src, dest) {
+                        moves.push(m)
+                    }
+                }
             }
         }
     }
 
-    fn make_jump_move(&self, moves: &mut Vec<Game>, src: usize, dest: usize) {
-        self.make_checked_jump(moves, src, dest, |_, _, _| false)
-    }
-
     #[inline(always)]
-    fn make_move(&self, src: usize, dest: usize) -> Game {
+    fn make_move(&self, src: usize, dest: usize) -> Option<Game> {
         let mut new_board = self.clone();
 
-        // Update piece hashmaps
-        let (me, opponent) = match new_board.board[src].unwrap().side {
-            Side::White => (&mut new_board.white, &mut new_board.black),
-            Side::Black => (&mut new_board.black, &mut new_board.white),
-        };
-        me.pieces.insert(new_board.board[src].unwrap().piece, dest);
-        if let Some(space) = new_board.board[dest] {
-            opponent.pieces.remove(&space.piece);
+        match new_board.board[src].unwrap().side {
+            Side::White => {
+                // Update piece hashmaps
+                new_board
+                    .white
+                    .pieces
+                    .insert(new_board.board[src].unwrap().piece, dest);
+                if let Some(space) = new_board.board[dest] {
+                    new_board.black.pieces.remove(&space.piece);
+                }
+
+                // Update board array
+                new_board.board[dest] = new_board.board[src];
+                new_board.board[src] = None;
+
+                // Did we check ourselves
+                if new_board.king_check(Side::White, new_board.white.pieces[&Piece::King]) {
+                    None
+                } else {
+                    // Did we check the opponent
+                    new_board.black.check =
+                        new_board.king_check(Side::Black, new_board.black.pieces[&Piece::King]);
+
+                    Some(new_board)
+                }
+            }
+            Side::Black => {
+                // Update piece hashmaps
+                new_board
+                    .black
+                    .pieces
+                    .insert(new_board.board[src].unwrap().piece, dest);
+                if let Some(space) = new_board.board[dest] {
+                    new_board.white.pieces.remove(&space.piece);
+                }
+
+                // Update board array
+                new_board.board[dest] = new_board.board[src];
+                new_board.board[src] = None;
+
+                // Did we check ourselves
+                if new_board.king_check(Side::Black, new_board.white.pieces[&Piece::King]) {
+                    None
+                } else {
+                    // Did we check the opponent
+                    new_board.white.check =
+                        new_board.king_check(Side::White, new_board.black.pieces[&Piece::King]);
+
+                    Some(new_board)
+                }
+            }
         }
-
-        // Update board array
-        new_board.board[dest] = new_board.board[src];
-        new_board.board[src] = None;
-
-        // Detect if this puts the either king in check
-        // We need to check both as a pin could cause the moving side to check itself
-        new_board.white.check =
-            new_board.king_check(Side::White, new_board.white.pieces[&Piece::King]);
-        new_board.black.check =
-            new_board.king_check(Side::Black, new_board.black.pieces[&Piece::King]);
-
-        new_board
     }
 }
 
@@ -663,11 +742,11 @@ mod tests {
         }
     }
 
+    #[test]
     pub fn perft_in() {
-        let correct_values = [20, 400, 8982, 197281];
+        let correct_values = [14, 191, 2812, 43238];
 
-        let board =
-            Game::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0".to_string());
+        let board = Game::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -".to_string());
         let mut side = Side::White;
         let mut moves = vec![board];
 
@@ -675,6 +754,10 @@ mod tests {
             let mut new_moves = vec![];
             for m in moves.iter() {
                 new_moves.append(&mut m.generate_ply(side));
+            }
+
+            for game in new_moves.iter() {
+                println!("{}", game);
             }
 
             assert_eq!(value, new_moves.len());
@@ -727,8 +810,6 @@ mod tests {
     pub fn parse_fen_with_black_check() {
         let game = Game::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/7R w - -".to_string());
 
-        assert_eq!(0x07, game.white.pieces[&Piece::Rook(true)]);
-        assert_eq!(0x37, game.black.pieces[&Piece::King]);
         assert!(!game.white.check);
         assert!(game.black.check);
     }
@@ -739,7 +820,7 @@ mod tests {
         let queen = game.board[0x73];
 
         // Move black queen to G6
-        let game = game.make_move(0x73, 0x55);
+        let game = game.make_move(0x73, 0x55).unwrap();
 
         assert_eq!(0x55, game.black.pieces[&Piece::Queen]);
         assert_eq!(None, game.board[0x73]);
@@ -754,7 +835,7 @@ mod tests {
         let queen = game.board[0x03];
 
         // Move white queen to G6
-        let game = game.make_move(0x03, 0x55);
+        let game = game.make_move(0x03, 0x55).unwrap();
 
         assert_eq!(0x55, game.white.pieces[&Piece::Queen]);
         assert_eq!(None, game.board[0x03]);
@@ -769,7 +850,7 @@ mod tests {
         let queen = game.board[0x73];
 
         // Move black queen to D2
-        let game = game.make_move(0x73, 0x13);
+        let game = game.make_move(0x73, 0x13).unwrap();
 
         assert_eq!(0x13, game.black.pieces[&Piece::Queen]);
         assert_eq!(None, game.board[0x73]);
@@ -784,7 +865,11 @@ mod tests {
         let game = Game::new();
 
         // Move white king to D4 & black queen to F6
-        let game = game.make_move(4, 0x33).make_move(0x73, 0x55);
+        let game = game
+            .make_move(4, 0x33)
+            .unwrap()
+            .make_move(0x73, 0x55)
+            .unwrap();
 
         assert_eq!(0x33, game.white.pieces[&Piece::King]);
         assert_eq!(0x55, game.black.pieces[&Piece::Queen]);
@@ -810,7 +895,11 @@ mod tests {
         let mut moves = vec![];
 
         // Move white king to E4 & black pawn to E5
-        let game = Game::new().make_move(0x04, 0x34).make_move(0x64, 0x44);
+        let game = Game::new()
+            .make_move(0x04, 0x34)
+            .unwrap()
+            .make_move(0x64, 0x44)
+            .unwrap();
 
         game.generate_king_moves(&mut moves, game.white.pieces[&Piece::King]);
         assert_eq!(6, moves.len());
@@ -823,8 +912,11 @@ mod tests {
         // Move white king to D5, black pawn to C5 & black bishop to C7
         let game = Game::new()
             .make_move(0x04, 0x43)
+            .unwrap()
             .make_move(0x62, 0x42)
-            .make_move(0x75, 0x62);
+            .unwrap()
+            .make_move(0x75, 0x62)
+            .unwrap();
 
         game.generate_king_moves(&mut moves, game.white.pieces[&Piece::King]);
         assert_eq!(3, moves.len());
@@ -837,8 +929,11 @@ mod tests {
         // Move white king to D4, white rook to B4, black rook to D6
         let game = Game::new()
             .make_move(0x04, 0x33)
+            .unwrap()
             .make_move(0x00, 0x31)
-            .make_move(0x70, 0x53);
+            .unwrap()
+            .make_move(0x70, 0x53)
+            .unwrap();
 
         game.generate_king_moves(&mut moves, game.white.pieces[&Piece::King]);
         assert_eq!(7, moves.len());
@@ -862,7 +957,7 @@ mod tests {
         let mut moves = vec![];
 
         // Move white queen to D5
-        let game = Game::new().make_move(0x03, 0x43);
+        let game = Game::new().make_move(0x03, 0x43).unwrap();
 
         game.generate_queen_moves(&mut moves, game.white.pieces[&Piece::Queen]);
         assert_eq!(19, moves.len());
@@ -892,7 +987,7 @@ mod tests {
         let mut moves = vec![];
 
         // Move white bishop to D5
-        let game = Game::new().make_move(0x05, 0x43);
+        let game = Game::new().make_move(0x05, 0x43).unwrap();
 
         game.generate_bishop_moves(&mut moves, game.white.pieces[&Piece::Bishop(true)]);
         assert_eq!(8, moves.len());
@@ -903,7 +998,7 @@ mod tests {
         let mut moves = vec![];
 
         // Move white bishop to B5
-        let game = Game::new().make_move(0x05, 0x41);
+        let game = Game::new().make_move(0x05, 0x41).unwrap();
 
         game.generate_bishop_moves(&mut moves, game.white.pieces[&Piece::Bishop(true)]);
         assert_eq!(6, moves.len());
@@ -933,7 +1028,7 @@ mod tests {
         let mut moves = vec![];
 
         // Move white rook to D5
-        let game = Game::new().make_move(0x00, 0x43);
+        let game = Game::new().make_move(0x00, 0x43).unwrap();
 
         game.generate_rook_moves(&mut moves, game.white.pieces[&Piece::Rook(false)]);
         assert_eq!(11, moves.len());
@@ -963,7 +1058,7 @@ mod tests {
         let mut moves = vec![];
 
         // Move white knight to D5
-        let game = Game::new().make_move(0x01, 0x43);
+        let game = Game::new().make_move(0x01, 0x43).unwrap();
 
         game.generate_knight_moves(&mut moves, game.white.pieces[&Piece::Knight(false)]);
         assert_eq!(8, moves.len());
@@ -974,7 +1069,7 @@ mod tests {
         let mut moves = vec![];
 
         // Move white knight to A5
-        let game = Game::new().make_move(0x01, 0x40);
+        let game = Game::new().make_move(0x01, 0x40).unwrap();
 
         game.generate_knight_moves(&mut moves, game.white.pieces[&Piece::Knight(false)]);
         assert_eq!(4, moves.len());
@@ -1004,7 +1099,11 @@ mod tests {
         let mut moves = vec![];
 
         // Move white pawn to D4 & black pawn to C5
-        let game = Game::new().make_move(0x13, 0x33).make_move(0x62, 0x42);
+        let game = Game::new()
+            .make_move(0x13, 0x33)
+            .unwrap()
+            .make_move(0x62, 0x42)
+            .unwrap();
 
         game.generate_pawn_moves(&mut moves, game.white.pieces[&Piece::Pawn(3)]);
         assert_eq!(2, moves.len());
@@ -1018,7 +1117,11 @@ mod tests {
         let mut moves = vec![];
 
         // Move white pawn to D5 & white pawn to D6
-        let game = Game::new().make_move(0x13, 0x43).make_move(0x14, 0x53);
+        let game = Game::new()
+            .make_move(0x13, 0x43)
+            .unwrap()
+            .make_move(0x14, 0x53)
+            .unwrap();
 
         game.generate_pawn_moves(&mut moves, game.white.pieces[&Piece::Pawn(3)]);
         assert_eq!(0, moves.len());
@@ -1029,7 +1132,11 @@ mod tests {
         let mut moves = vec![];
 
         // Move white pawn to D5 & black pawn to D6
-        let game = Game::new().make_move(0x13, 0x43).make_move(0x63, 0x53);
+        let game = Game::new()
+            .make_move(0x13, 0x43)
+            .unwrap()
+            .make_move(0x63, 0x53)
+            .unwrap();
 
         game.generate_pawn_moves(&mut moves, game.white.pieces[&Piece::Pawn(3)]);
         assert_eq!(0, moves.len());
@@ -1040,7 +1147,7 @@ mod tests {
         let mut moves = vec![];
 
         // Move white pawn to D6
-        let game = Game::new().make_move(0x13, 0x53);
+        let game = Game::new().make_move(0x13, 0x53).unwrap();
 
         game.generate_pawn_moves(&mut moves, game.white.pieces[&Piece::Pawn(3)]);
         assert_eq!(2, moves.len());
@@ -1060,7 +1167,11 @@ mod tests {
     #[test]
     pub fn king_in_check_from_bishop() {
         // Move white king to D4 & black bishop to B6
-        let game = Game::new().make_move(0x04, 0x33).make_move(0x75, 0x51);
+        let game = Game::new()
+            .make_move(0x04, 0x33)
+            .unwrap()
+            .make_move(0x75, 0x51)
+            .unwrap();
 
         assert!(game.king_check(Side::White, game.white.pieces[&Piece::King]));
     }
@@ -1068,7 +1179,11 @@ mod tests {
     #[test]
     pub fn king_in_check_from_pawn() {
         // Move white king to D4 & black pawn to C5
-        let game = Game::new().make_move(0x04, 0x33).make_move(0x67, 0x42);
+        let game = Game::new()
+            .make_move(0x04, 0x33)
+            .unwrap()
+            .make_move(0x67, 0x42)
+            .unwrap();
 
         assert!(game.king_check(Side::White, game.white.pieces[&Piece::King]));
     }
@@ -1076,7 +1191,11 @@ mod tests {
     #[test]
     pub fn black_king_in_check_from_pawn() {
         // Move black king to D4 & white pawn to E3
-        let game = Game::new().make_move(0x74, 0x33).make_move(0x16, 0x24);
+        let game = Game::new()
+            .make_move(0x74, 0x33)
+            .unwrap()
+            .make_move(0x16, 0x24)
+            .unwrap();
 
         assert!(game.king_check(Side::Black, game.black.pieces[&Piece::King]));
     }
@@ -1084,7 +1203,11 @@ mod tests {
     #[test]
     pub fn king_in_check_from_rook() {
         // Move white king to D4 & black rook to H4
-        let game = Game::new().make_move(0x04, 0x33).make_move(0x70, 0x37);
+        let game = Game::new()
+            .make_move(0x04, 0x33)
+            .unwrap()
+            .make_move(0x70, 0x37)
+            .unwrap();
 
         assert!(game.king_check(Side::White, game.white.pieces[&Piece::King]));
     }
