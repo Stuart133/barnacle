@@ -8,9 +8,9 @@
 
 use std::mem::size_of;
 
-use board::{Game, Side};
+use game::{Game, Side};
 
-mod board;
+mod game;
 
 fn main() {
     let board = Game::new();

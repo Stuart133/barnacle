@@ -506,7 +506,7 @@ mod tests {
     // This is the master correctness test, if it's wrong then the move generator is not working correctly
     // See https://www.chessprogramming.org/Perft for more details
     pub fn perft() {
-        let correct_values = [20, 400, 8902, 197281];
+        let correct_values = [20, 400, 8982, 197281];
 
         let board = Game::new();
         let mut side = Side::White;
