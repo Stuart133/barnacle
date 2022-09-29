@@ -11,40 +11,6 @@ const UP_RIGHT: usize = 17;
 const RIGHT: usize = 1;
 const KNIGHT_MOVES: [usize; 4] = [14, 18, 31, 33];
 
-// Piece list index values
-const WHITE_QUEEN_ROOK: usize = 0;
-const WHITE_QUEEN_KNIGHT: usize = 1;
-const WHITE_QUEEN_BISHOP: usize = 2;
-const WHITE_QUEEN: usize = 3;
-const WHITE_KING: usize = 4;
-const WHITE_KING_BISHOP: usize = 5;
-const WHITE_KING_KNIGHT: usize = 6;
-const WHITE_KING_ROOK: usize = 7;
-const WHITE_PAWN_A: usize = 8;
-const WHITE_PAWN_B: usize = 9;
-const WHITE_PAWN_C: usize = 10;
-const WHITE_PAWN_D: usize = 11;
-const WHITE_PAWN_E: usize = 12;
-const WHITE_PAWN_F: usize = 13;
-const WHITE_PAWN_G: usize = 14;
-const WHITE_PAWN_H: usize = 15;
-const BLACK_QUEEN_ROOK: usize = 16;
-const BLACK_QUEEN_KNIGHT: usize = 17;
-const BLACK_QUEEN_BISHOP: usize = 18;
-const BLACK_QUEEN: usize = 19;
-const BLACK_KING: usize = 20;
-const BLACK_KING_BISHOP: usize = 21;
-const BLACK_KING_KNIGHT: usize = 22;
-const BLACK_KING_ROOK: usize = 23;
-const BLACK_PAWN_A: usize = 24;
-const BLACK_PAWN_B: usize = 25;
-const BLACK_PAWN_C: usize = 26;
-const BLACK_PAWN_D: usize = 27;
-const BLACK_PAWN_E: usize = 28;
-const BLACK_PAWN_F: usize = 29;
-const BLACK_PAWN_G: usize = 30;
-const BLACK_PAWN_H: usize = 31;
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Piece {
     King,
@@ -130,23 +96,22 @@ impl Game {
         }
     }
 
-    pub fn generate_ply(&self, player: Side) -> Vec<Game> {
+    pub fn generate_ply(&self, side: Side) -> Vec<Game> {
         let mut moves = vec![];
 
-        let side = if player == Side::White {
-            &self.white
+        let player = self.get_player(side);
+        if player.check {
+            self.generate_king_moves(&mut moves, player.pieces[&Piece::King])
         } else {
-            &self.black
-        };
-
-        for (piece, position) in self.get_player(player).pieces.iter() {
-            match piece {
-                Piece::King => self.generate_king_moves(&mut moves, *position),
-                Piece::Queen => self.generate_queen_moves(&mut moves, *position),
-                Piece::Rook(_) => self.generate_rook_moves(&mut moves, *position),
-                Piece::Knight(_) => self.generate_knight_moves(&mut moves, *position),
-                Piece::Bishop(_) => self.generate_bishop_moves(&mut moves, *position),
-                Piece::Pawn(_) => self.generate_pawn_moves(&mut moves, *position),
+            for (piece, position) in player.pieces.iter() {
+                match piece {
+                    Piece::King => self.generate_king_moves(&mut moves, *position),
+                    Piece::Queen => self.generate_queen_moves(&mut moves, *position),
+                    Piece::Rook(_) => self.generate_rook_moves(&mut moves, *position),
+                    Piece::Knight(_) => self.generate_knight_moves(&mut moves, *position),
+                    Piece::Bishop(_) => self.generate_bishop_moves(&mut moves, *position),
+                    Piece::Pawn(_) => self.generate_pawn_moves(&mut moves, *position),
+                }
             }
         }
 
@@ -186,7 +151,7 @@ impl Game {
                 };
 
             false || val
-        
+
             // Detect white attacking pawns - which attack from below
             } else {
                 if let Some(attack) = position.checked_sub(*offset) {
@@ -522,6 +487,13 @@ impl Game {
         new_board.board[dest] = new_board.board[src];
         new_board.board[src] = None;
 
+        // Detect if this puts the either king in check
+        // We need to check both as a pin could cause the moving side to check itself
+        new_board.white.check =
+            new_board.king_check(Side::White, new_board.white.pieces[&Piece::King]);
+        new_board.black.check =
+            new_board.king_check(Side::Black, new_board.black.pieces[&Piece::King]);
+
         new_board
     }
 }
@@ -567,6 +539,8 @@ mod tests {
         assert_eq!(0x55, game.black.pieces[&Piece::Queen]);
         assert_eq!(None, game.board[0x73]);
         assert_eq!(queen, game.board[0x55]);
+        assert!(!game.white.check);
+        assert!(!game.black.check);
     }
 
     #[test]
@@ -580,6 +554,8 @@ mod tests {
         assert_eq!(0x55, game.white.pieces[&Piece::Queen]);
         assert_eq!(None, game.board[0x03]);
         assert_eq!(queen, game.board[0x55]);
+        assert!(!game.white.check);
+        assert!(!game.black.check);
     }
 
     #[test]
@@ -593,7 +569,22 @@ mod tests {
         assert_eq!(0x13, game.black.pieces[&Piece::Queen]);
         assert_eq!(None, game.board[0x73]);
         assert_eq!(queen, game.board[0x13]);
-        assert!(!game.white.pieces.contains_key(&Piece::Pawn(3)))
+        assert!(!game.white.pieces.contains_key(&Piece::Pawn(3)));
+        assert!(game.white.check);
+        assert!(!game.black.check);
+    }
+
+    #[test]
+    pub fn make_move_puts_king_in_check() {
+        let game = Game::new();
+
+        // Move white king to D4 & black queen to F6
+        let game = game.make_move(4, 0x33).make_move(0x73, 0x55);
+
+        assert_eq!(0x33, game.white.pieces[&Piece::King]);
+        assert_eq!(0x55, game.black.pieces[&Piece::Queen]);
+        assert!(game.white.check);
+        assert!(!game.black.check);
     }
 
     #[test]
