@@ -33,13 +33,13 @@ pub struct Space {
     side: Side,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct Player {
     pieces: HashMap<Piece, usize>,
     check: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Game {
     board: [Option<Space>; 128], // TODO: Look into bijective map to replace this
     white: Player,
@@ -47,6 +47,7 @@ pub struct Game {
 }
 
 impl Game {
+    /// Create a new game object, from the standard starting position
     #[rustfmt::skip]
     pub fn new() -> Self {
         Game{
@@ -86,6 +87,131 @@ impl Game {
                                 (Piece::Pawn(4), 0x64), (Piece::Pawn(5), 0x65), (Piece::Pawn(6), 0x66),
                                 (Piece::Pawn(7), 0x67)]), check: false },
         }
+    }
+
+    // Create a new game object, using A Forsyth–Edwards Notation string
+    pub fn from_fen(raw_game: String) -> Game {
+        let mut game = Self::new();
+        let mut fen = raw_game.split(" ");
+
+        let mut white_pawn = 0;
+        let mut black_pawn = 0;
+        let mut white_knight = false;
+        let mut black_knight = false;
+        let mut white_bishop = false;
+        let mut black_bishop = false;
+        let mut white_rook = false;
+        let mut black_rook = false;
+        let mut space = 0x70;
+        for rune in fen.next().unwrap().chars() {
+            println!("{} {:#02x}", rune, space);
+            match rune {
+                'P' => {
+                    game.board[space] = Some(Space {
+                        piece: Piece::Pawn(white_pawn),
+                        side: Side::White,
+                    });
+                    game.white.pieces.insert(Piece::Pawn(white_pawn), space);
+                    white_pawn += 1;
+                }
+                'N' => {
+                    game.board[space] = Some(Space {
+                        piece: Piece::Knight(white_knight),
+                        side: Side::White,
+                    });
+                    game.white.pieces.insert(Piece::Knight(white_knight), space);
+                    white_knight = true;
+                }
+                'B' => {
+                    game.board[space] = Some(Space {
+                        piece: Piece::Bishop(white_bishop),
+                        side: Side::White,
+                    });
+                    game.white.pieces.insert(Piece::Bishop(white_bishop), space);
+                    white_bishop = true;
+                }
+                'R' => {
+                    game.board[space] = Some(Space {
+                        piece: Piece::Rook(white_rook),
+                        side: Side::White,
+                    });
+                    game.white.pieces.insert(Piece::Rook(white_rook), space);
+                    white_rook = true;
+                }
+                'Q' => {
+                    game.board[space] = Some(Space {
+                        piece: Piece::Queen,
+                        side: Side::White,
+                    });
+                    game.white.pieces.insert(Piece::Queen, space);
+                }
+                'K' => {
+                    game.board[space] = Some(Space {
+                        piece: Piece::King,
+                        side: Side::White,
+                    });
+                    game.white.pieces.insert(Piece::King, space);
+                }
+                'p' => {
+                    game.board[space] = Some(Space {
+                        piece: Piece::Pawn(black_pawn),
+                        side: Side::Black,
+                    });
+                    game.black.pieces.insert(Piece::Pawn(black_pawn), space);
+                    black_pawn += 1;
+                }
+                'n' => {
+                    game.board[space] = Some(Space {
+                        piece: Piece::Knight(black_knight),
+                        side: Side::Black,
+                    });
+                    game.black.pieces.insert(Piece::Knight(black_knight), space);
+                    black_knight = true;
+                }
+                'b' => {
+                    game.board[space] = Some(Space {
+                        piece: Piece::Bishop(black_bishop),
+                        side: Side::Black,
+                    });
+                    game.black.pieces.insert(Piece::Bishop(black_bishop), space);
+                    black_bishop = true;
+                }
+                'r' => {
+                    game.board[space] = Some(Space {
+                        piece: Piece::Rook(black_rook),
+                        side: Side::Black,
+                    });
+                    game.black.pieces.insert(Piece::Rook(black_rook), space);
+                    black_rook = true;
+                }
+                'q' => {
+                    game.board[space] = Some(Space {
+                        piece: Piece::Queen,
+                        side: Side::Black,
+                    });
+                    game.black.pieces.insert(Piece::Queen, space);
+                }
+                'k' => {
+                    game.board[space] = Some(Space {
+                        piece: Piece::King,
+                        side: Side::Black,
+                    });
+                    game.black.pieces.insert(Piece::King, space);
+                }
+                '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' => {
+                    let skip = rune.to_digit(10).unwrap() as usize;
+                    space += skip - 1;
+                }
+                '/' => {
+                    space -= 0x18; // Move to the start of the next rank
+                    continue; // And skip the +1
+                }
+                _ => panic!("unexpected character in FEN string"),
+            }
+            space += 1;
+        }
+
+        game
     }
 
     #[inline(always)]
@@ -526,6 +652,15 @@ mod tests {
                 side = Side::White;
             }
         }
+    }
+
+    #[test]
+    pub fn parse_fen_matches_default() {
+        let game = Game::new();
+        let game_fen =
+            Game::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0".to_string());
+
+        assert_eq!(game.board, game_fen.board);
     }
 
     #[test]
