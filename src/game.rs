@@ -813,7 +813,8 @@ mod tests {
 
     #[test]
     pub fn make_move_black_sets_board_and_pieces() {
-        let game = Game::new();
+        let mut game = Game::new();
+        game.current_player = Side::Black;
         let queen = game.board[0x73];
 
         // Move black queen to G6
@@ -843,7 +844,8 @@ mod tests {
 
     #[test]
     pub fn make_move_with_capture_clears_captured_piece() {
-        let game = Game::new();
+        let mut game = Game::new();
+        game.current_player = Side::Black;
         let queen = game.board[0x73];
 
         // Move black queen to D2
@@ -876,12 +878,14 @@ mod tests {
 
     #[test]
     pub fn king_moves_from_start() {
-        let game = Game::new();
+        let mut game = Game::new();
         let mut moves = vec![];
 
         // E1
         game.generate_king_moves(&mut moves, game.white.pieces[&Piece::King]);
         assert_eq!(0, moves.len());
+
+        game.current_player = Side::Black;
         // E8
         game.generate_king_moves(&mut moves, game.black.pieces[&Piece::King]);
         assert_eq!(0, moves.len());
@@ -907,13 +911,13 @@ mod tests {
         let mut moves = vec![];
 
         // Move white king to D5, black pawn to C5 & black bishop to C7
-        let game = Game::new()
+        let mut game = Game::new()
             .make_move(0x04, 0x43)
             .unwrap()
             .make_move(0x62, 0x42)
-            .unwrap()
-            .make_move(0x75, 0x62)
             .unwrap();
+        game.current_player = Side::Black;
+        game = game.make_move(0x75, 0x62).unwrap();
 
         game.generate_king_moves(&mut moves, game.white.pieces[&Piece::King]);
         assert_eq!(3, moves.len());
@@ -924,13 +928,14 @@ mod tests {
         let mut moves = vec![];
 
         // Move white king to D4, white rook to B4, black rook to D6
-        let game = Game::new()
-            .make_move(0x04, 0x33)
-            .unwrap()
+        let mut game = Game::new().make_move(0x04, 0x33).unwrap();
+        game.current_player = Side::White;
+        game = game
             .make_move(0x00, 0x31)
             .unwrap()
             .make_move(0x70, 0x53)
             .unwrap();
+        game.current_player = Side::White;
 
         game.generate_king_moves(&mut moves, game.white.pieces[&Piece::King]);
 
@@ -939,12 +944,14 @@ mod tests {
 
     #[test]
     pub fn queen_moves_from_start() {
-        let game = Game::new();
+        let mut game = Game::new();
         let mut moves = vec![];
 
         // D1
         game.generate_queen_moves(&mut moves, game.white.pieces[&Piece::Queen]);
         assert_eq!(0, moves.len());
+
+        game.current_player = Side::Black;
         // D8
         game.generate_queen_moves(&mut moves, game.black.pieces[&Piece::Queen]);
         assert_eq!(0, moves.len());
@@ -1062,7 +1069,8 @@ mod tests {
         let mut moves = vec![];
 
         // Move white knight to D5
-        let game = Game::new().make_move(0x01, 0x43).unwrap();
+        let mut game = Game::new().make_move(0x01, 0x43).unwrap();
+        game.current_player = Side::White;
 
         game.generate_knight_moves(&mut moves, game.white.pieces[&Piece::Knight(false)]);
         assert_eq!(8, moves.len());
@@ -1073,7 +1081,8 @@ mod tests {
         let mut moves = vec![];
 
         // Move white knight to A5
-        let game = Game::new().make_move(0x01, 0x40).unwrap();
+        let mut game = Game::new().make_move(0x01, 0x40).unwrap();
+        game.current_player = Side::White;
 
         game.generate_knight_moves(&mut moves, game.white.pieces[&Piece::Knight(false)]);
         assert_eq!(4, moves.len());
@@ -1105,15 +1114,17 @@ mod tests {
         let mut moves = vec![];
 
         // Move white pawn to D4 & black pawn to C5
-        let game = Game::new()
+        let mut game = Game::new()
             .make_move(0x13, 0x33)
             .unwrap()
             .make_move(0x62, 0x42)
             .unwrap();
+        game.current_player = Side::White;
 
         game.generate_pawn_moves(&mut moves, game.white.pieces[&Piece::Pawn(3)]);
         assert_eq!(2, moves.len());
 
+        game.current_player = Side::Black;
         game.generate_pawn_moves(&mut moves, game.black.pieces[&Piece::Pawn(2)]);
         assert_eq!(4, moves.len());
     }
@@ -1153,7 +1164,8 @@ mod tests {
         let mut moves = vec![];
 
         // Move white pawn to D6
-        let game = Game::new().make_move(0x13, 0x53).unwrap();
+        let mut game = Game::new().make_move(0x13, 0x53).unwrap();
+        game.current_player = Side::White;
 
         game.generate_pawn_moves(&mut moves, game.white.pieces[&Piece::Pawn(3)]);
         assert_eq!(2, moves.len());
