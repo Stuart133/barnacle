@@ -279,18 +279,15 @@ impl Game {
         let mut moves = vec![];
 
         let player = self.get_player(side);
-        if player.check {
-            self.generate_king_moves(&mut moves, player.pieces[&Piece::King])
-        } else {
-            for (piece, position) in player.pieces.iter() {
-                match piece {
-                    Piece::King => self.generate_king_moves(&mut moves, *position),
-                    Piece::Queen => self.generate_queen_moves(&mut moves, *position),
-                    Piece::Rook(_) => self.generate_rook_moves(&mut moves, *position),
-                    Piece::Knight(_) => self.generate_knight_moves(&mut moves, *position),
-                    Piece::Bishop(_) => self.generate_bishop_moves(&mut moves, *position),
-                    Piece::Pawn(_) => self.generate_pawn_moves(&mut moves, *position),
-                }
+
+        for (piece, position) in player.pieces.iter() {
+            match piece {
+                Piece::King => self.generate_king_moves(&mut moves, *position),
+                Piece::Queen => self.generate_queen_moves(&mut moves, *position),
+                Piece::Rook(_) => self.generate_rook_moves(&mut moves, *position),
+                Piece::Knight(_) => self.generate_knight_moves(&mut moves, *position),
+                Piece::Bishop(_) => self.generate_bishop_moves(&mut moves, *position),
+                Piece::Pawn(_) => self.generate_pawn_moves(&mut moves, *position),
             }
         }
 
@@ -333,6 +330,7 @@ impl Game {
 
             // Detect white attacking pawns - which attack from below
             } else {
+                // println!("{:#02x} {}", position, offset);
                 if let Some(attack) = position.checked_sub(*offset) {
                     if let Some(Space {
                         piece: Piece::Pawn(_),
@@ -698,12 +696,12 @@ impl Game {
                 new_board.board[src] = None;
 
                 // Did we check ourselves
-                if new_board.king_check(Side::Black, new_board.white.pieces[&Piece::King]) {
+                if new_board.king_check(Side::Black, new_board.black.pieces[&Piece::King]) {
                     None
                 } else {
                     // Did we check the opponent
                     new_board.white.check =
-                        new_board.king_check(Side::White, new_board.black.pieces[&Piece::King]);
+                        new_board.king_check(Side::White, new_board.white.pieces[&Piece::King]);
 
                     Some(new_board)
                 }
@@ -747,7 +745,7 @@ mod tests {
         let correct_values = [14, 191, 2812, 43238];
 
         let board = Game::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -".to_string());
-        let mut side = Side::White;
+        let mut side = Side::Black;
         let mut moves = vec![board];
 
         for value in correct_values {
@@ -756,8 +754,30 @@ mod tests {
                 new_moves.append(&mut m.generate_ply(side));
             }
 
-            for game in new_moves.iter() {
-                println!("{}", game);
+            assert_eq!(value, new_moves.len());
+            moves = new_moves;
+            if side == Side::White {
+                side = Side::Black;
+            } else {
+                side = Side::White;
+            }
+        }
+    }
+
+    #[test]
+    pub fn perft_even_more() {
+        let correct_values = [6, 264, 9467, 422333];
+
+        let game = Game::from_fen(
+            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1".to_string(),
+        );
+        let mut side = Side::White;
+        let mut moves = vec![game];
+
+        for value in correct_values {
+            let mut new_moves = vec![];
+            for m in moves.iter() {
+                new_moves.append(&mut m.generate_ply(side));
             }
 
             assert_eq!(value, new_moves.len());
@@ -936,7 +956,8 @@ mod tests {
             .unwrap();
 
         game.generate_king_moves(&mut moves, game.white.pieces[&Piece::King]);
-        assert_eq!(7, moves.len());
+
+        assert_eq!(6, moves.len());
     }
 
     #[test]
