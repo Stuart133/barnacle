@@ -725,46 +725,115 @@ impl Game {
 mod tests {
     use super::*;
 
-    #[test]
-    // This is the master correctness test, if it's wrong then the move generator is not working correctly
-    // See https://www.chessprogramming.org/Perft for more details
-    pub fn perft() {
-        let correct_values = [20, 400, 8902, 197281];
-        let captures = [0, 0, 0, 34];
-        let checks = [0, 0, 0, 12];
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    struct Level {
+        moves: usize,
+        captures: usize,
+        checks: usize,
+    }
 
-        let board = Game::new();
-        let mut moves = vec![board];
+    fn perft_ply(levels: &mut [Level; 4], game: Game, depth: usize) {
+        if depth == 0 {
+            return;
+        }
 
-        for value in correct_values {
-            let mut new_moves = vec![];
-            for m in moves.iter() {
-                new_moves.append(&mut m.generate_ply());
+        let moves = game.generate_ply();
+        levels[levels.len() - depth].moves += moves.len();
+
+        for new_game in moves {
+            if new_game.black.check || new_game.white.check {
+                levels[levels.len() - depth].checks += 1;
+            }
+            if new_game.black.pieces.len() + new_game.white.pieces.len()
+                != game.black.pieces.len() + game.white.pieces.len()
+            {
+                levels[levels.len() - depth].captures += 1;
+
+                // Sanity check
+                if (game.black.pieces.len() + game.white.pieces.len())
+                    - (new_game.black.pieces.len() + new_game.white.pieces.len())
+                    != 1
+                {
+                    panic!("invalid capture");
+                }
             }
 
-            assert_eq!(value, new_moves.len());
-            moves = new_moves;
+            perft_ply(levels, new_game, depth - 1);
         }
     }
 
     #[test]
+    // This is the master correctness test, if it's wrong then the move generator is not working correctly
+    // See https://www.chessprogramming.org/Perft for more details
+    pub fn perft() {
+        let correct_levels = [
+            Level {
+                moves: 20,
+                captures: 0,
+                checks: 0,
+            },
+            Level {
+                moves: 400,
+                captures: 0,
+                checks: 0,
+            },
+            Level {
+                moves: 8902,
+                captures: 34,
+                checks: 12,
+            },
+            Level {
+                moves: 197281,
+                captures: 1576,
+                checks: 469,
+            },
+        ];
+
+        let game = Game::new();
+        let mut levels = [Level {
+            moves: 0,
+            captures: 0,
+            checks: 0,
+        }; 4];
+        perft_ply(&mut levels, game, 4);
+
+        assert_eq!(correct_levels, levels);
+    }
+
+    #[test]
     pub fn perft_in() {
-        let correct_values = [14, 191, 2812, 43238];
-        let captures = [1, 14, 209, 3348];
-        let checks = [2, 10, 267, 1680];
+        let correct_levels = [
+            Level {
+                moves: 14,
+                captures: 1,
+                checks: 2,
+            },
+            Level {
+                moves: 191,
+                captures: 14,
+                checks: 10,
+            },
+            Level {
+                moves: 2812,
+                captures: 209,
+                checks: 267,
+            },
+            Level {
+                moves: 43238,
+                captures: 3348,
+                checks: 1680,
+            },
+        ];
 
-        let board = Game::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -".to_string());
-        let mut moves = vec![board];
+        let game = Game::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -".to_string());
+        let mut levels = [Level {
+            moves: 0,
+            captures: 0,
+            checks: 0,
+        }; 4];
+        perft_ply(&mut levels, game, 4);
 
-        for value in correct_values {
-            let mut new_moves = vec![];
-            for m in moves.iter() {
-                new_moves.append(&mut m.generate_ply());
-            }
-
-            assert_eq!(value, new_moves.len());
-            moves = new_moves;
-        }
+        assert_eq!(correct_levels, levels);
     }
 
     #[test]
