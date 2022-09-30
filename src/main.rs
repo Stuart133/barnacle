@@ -8,14 +8,14 @@
 
 use std::mem::size_of;
 
-use game::{Game, Side};
+use game::Game;
 
 mod game;
 
 fn main() {
     let board = Game::new();
 
-    board.generate_ply(Side::White);
+    board.generate_ply();
 
     println!("{}", size_of::<Game>());
 }

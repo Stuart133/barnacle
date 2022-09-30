@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     fmt::Display,
     mem::{discriminant, Discriminant},
+    ops,
 };
 
 // Directional movement offsets using 0x88 board representation
@@ -13,7 +14,7 @@ const RIGHT: usize = 1;
 const KNIGHT_MOVES: [usize; 4] = [14, 18, 31, 33];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum Piece {
+enum Piece {
     King,
     Queen,
     Rook(bool),   // True if king rook
@@ -23,9 +24,21 @@ pub enum Piece {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum Side {
+enum Side {
     White,
     Black,
+}
+
+impl ops::Not for Side {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        if self == Side::White {
+            Side::Black
+        } else {
+            Side::White
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -66,6 +79,7 @@ struct Player {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Game {
     board: [Option<Space>; 128], // TODO: Look into bijective map to replace this
+    current_player: Side,
     white: Player,
     black: Player,
 }
@@ -128,6 +142,7 @@ impl Game {
                                 (Piece::Pawn(1), 0x61), (Piece::Pawn(2), 0x62), (Piece::Pawn(3), 0x63),
                                 (Piece::Pawn(4), 0x64), (Piece::Pawn(5), 0x65), (Piece::Pawn(6), 0x66),
                                 (Piece::Pawn(7), 0x67)]), check: false },
+            current_player: Side::White,
         }
     }
 
@@ -143,6 +158,7 @@ impl Game {
                 pieces: HashMap::new(),
                 check: false,
             },
+            current_player: Side::White,
         };
         let mut fen = raw_game.split(" ");
 
@@ -268,17 +284,17 @@ impl Game {
     }
 
     #[inline(always)]
-    fn get_player(&self, player: Side) -> &Player {
-        match player {
+    fn get_player(&self) -> &Player {
+        match self.current_player {
             Side::White => &self.white,
             Side::Black => &self.black,
         }
     }
 
-    pub fn generate_ply(&self, side: Side) -> Vec<Game> {
+    pub fn generate_ply(&self) -> Vec<Game> {
         let mut moves = vec![];
 
-        let player = self.get_player(side);
+        let player = self.get_player();
 
         for (piece, position) in player.pieces.iter() {
             match piece {
@@ -436,11 +452,8 @@ impl Game {
 
     #[inline(always)]
     fn generate_pawn_moves(&self, moves: &mut Vec<Game>, src: usize) {
-        // TODO: En passent
-        match self.board[src]
-            .expect("generate pawn moves called on empty space")
-            .side
-        {
+        // TODO: En passant
+        match self.current_player {
             Side::White => {
                 let dest = src + UP;
                 if dest & 0x88 == 0 {
@@ -609,11 +622,7 @@ impl Game {
             if dest & 0x88 == 0 {
                 match self.board[dest] {
                     Some(target) => {
-                        if target.side
-                            != self.board[src]
-                                .expect("sliding move called on empty space")
-                                .side
-                        {
+                        if target.side != self.current_player {
                             if let Some(m) = self.make_move(src, dest) {
                                 moves.push(m)
                             }
@@ -636,7 +645,7 @@ impl Game {
         if dest & 0x88 == 0 {
             match self.board[dest] {
                 Some(target) => {
-                    if target.side != self.board[src].unwrap().side {
+                    if target.side != self.current_player {
                         if let Some(m) = self.make_move(src, dest) {
                             moves.push(m)
                         }
@@ -655,7 +664,7 @@ impl Game {
     fn make_move(&self, src: usize, dest: usize) -> Option<Game> {
         let mut new_board = self.clone();
 
-        match new_board.board[src].unwrap().side {
+        match self.current_player {
             Side::White => {
                 // Update piece hashmaps
                 new_board
@@ -678,6 +687,7 @@ impl Game {
                     new_board.black.check =
                         new_board.king_check(Side::Black, new_board.black.pieces[&Piece::King]);
 
+                    new_board.current_player = !new_board.current_player;
                     Some(new_board)
                 }
             }
@@ -703,6 +713,7 @@ impl Game {
                     new_board.white.check =
                         new_board.king_check(Side::White, new_board.white.pieces[&Piece::King]);
 
+                    new_board.current_player = !new_board.current_player;
                     Some(new_board)
                 }
             }
@@ -718,75 +729,41 @@ mod tests {
     // This is the master correctness test, if it's wrong then the move generator is not working correctly
     // See https://www.chessprogramming.org/Perft for more details
     pub fn perft() {
-        let correct_values = [20, 400, 8982, 197281];
+        let correct_values = [20, 400, 8902, 197281];
+        let captures = [0, 0, 0, 34];
+        let checks = [0, 0, 0, 12];
 
         let board = Game::new();
-        let mut side = Side::White;
         let mut moves = vec![board];
 
         for value in correct_values {
             let mut new_moves = vec![];
             for m in moves.iter() {
-                new_moves.append(&mut m.generate_ply(side));
+                new_moves.append(&mut m.generate_ply());
             }
 
             assert_eq!(value, new_moves.len());
             moves = new_moves;
-            if side == Side::White {
-                side = Side::Black;
-            } else {
-                side = Side::White;
-            }
         }
     }
 
     #[test]
     pub fn perft_in() {
         let correct_values = [14, 191, 2812, 43238];
+        let captures = [1, 14, 209, 3348];
+        let checks = [2, 10, 267, 1680];
 
         let board = Game::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -".to_string());
-        let mut side = Side::Black;
         let mut moves = vec![board];
 
         for value in correct_values {
             let mut new_moves = vec![];
             for m in moves.iter() {
-                new_moves.append(&mut m.generate_ply(side));
+                new_moves.append(&mut m.generate_ply());
             }
 
             assert_eq!(value, new_moves.len());
             moves = new_moves;
-            if side == Side::White {
-                side = Side::Black;
-            } else {
-                side = Side::White;
-            }
-        }
-    }
-
-    #[test]
-    pub fn perft_even_more() {
-        let correct_values = [6, 264, 9467, 422333];
-
-        let game = Game::from_fen(
-            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1".to_string(),
-        );
-        let mut side = Side::White;
-        let mut moves = vec![game];
-
-        for value in correct_values {
-            let mut new_moves = vec![];
-            for m in moves.iter() {
-                new_moves.append(&mut m.generate_ply(side));
-            }
-
-            assert_eq!(value, new_moves.len());
-            moves = new_moves;
-            if side == Side::White {
-                side = Side::Black;
-            } else {
-                side = Side::White;
-            }
         }
     }
 
@@ -986,7 +963,7 @@ mod tests {
 
     #[test]
     pub fn bishop_moves_from_start() {
-        let game = Game::new();
+        let mut game = Game::new();
         let mut moves = vec![];
 
         // C1
@@ -995,6 +972,8 @@ mod tests {
         // F1
         game.generate_bishop_moves(&mut moves, game.white.pieces[&Piece::Bishop(true)]);
         assert_eq!(0, moves.len());
+
+        game.current_player = Side::Black;
         // C8
         game.generate_bishop_moves(&mut moves, game.black.pieces[&Piece::Bishop(false)]);
         assert_eq!(0, moves.len());
@@ -1027,7 +1006,7 @@ mod tests {
 
     #[test]
     pub fn rook_moves_from_start() {
-        let game = Game::new();
+        let mut game = Game::new();
         let mut moves = vec![];
 
         // A1
@@ -1036,6 +1015,8 @@ mod tests {
         // H1
         game.generate_rook_moves(&mut moves, game.white.pieces[&Piece::Rook(true)]);
         assert_eq!(0, moves.len());
+
+        game.current_player = Side::Black;
         // A8
         game.generate_rook_moves(&mut moves, game.black.pieces[&Piece::Rook(false)]);
         assert_eq!(0, moves.len());
@@ -1057,7 +1038,7 @@ mod tests {
 
     #[test]
     pub fn knight_moves_from_start() {
-        let game = Game::new();
+        let mut game = Game::new();
         let mut moves = vec![];
 
         // B1
@@ -1066,6 +1047,8 @@ mod tests {
         // G1
         game.generate_knight_moves(&mut moves, game.white.pieces[&Piece::Knight(true)]);
         assert_eq!(4, moves.len());
+
+        game.current_player = Side::Black;
         // B8
         game.generate_knight_moves(&mut moves, game.black.pieces[&Piece::Knight(false)]);
         assert_eq!(6, moves.len());
@@ -1098,7 +1081,7 @@ mod tests {
 
     #[test]
     pub fn pawn_moves_from_start() {
-        let game = Game::new();
+        let mut game = Game::new();
         let mut moves = vec![];
 
         // A2
@@ -1107,6 +1090,8 @@ mod tests {
         // E2
         game.generate_pawn_moves(&mut moves, game.white.pieces[&Piece::Pawn(4)]);
         assert_eq!(4, moves.len());
+
+        game.current_player = Side::Black;
         // B7
         game.generate_pawn_moves(&mut moves, game.black.pieces[&Piece::Pawn(1)]);
         assert_eq!(6, moves.len());
@@ -1211,8 +1196,11 @@ mod tests {
 
     #[test]
     pub fn black_king_in_check_from_pawn() {
+        let mut game = Game::new();
+        game.current_player = Side::Black;
+
         // Move black king to D4 & white pawn to E3
-        let game = Game::new()
+        game = game
             .make_move(0x74, 0x33)
             .unwrap()
             .make_move(0x16, 0x24)
