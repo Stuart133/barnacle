@@ -465,7 +465,7 @@ impl Game {
                 }
                 // If we're on the starting space, generate the two space move
                 // We can omit the off board test as this can't be off board
-                if src >= 0x10 && src <= 0x17 {
+                if src >= 0x10 && src <= 0x17 && self.board[src + 0x10] == None {
                     let dest = src + UP + UP;
                     if let None = self.board[dest] {
                         if let Some(m) = self.make_move(src, dest) {
@@ -511,7 +511,7 @@ impl Game {
                 }
                 // If we're on the starting space, generate the two space move
                 // We can omit the off board test & checked sub as this can't be off board
-                if src >= 0x60 && src <= 0x67 {
+                if src >= 0x60 && src <= 0x67 && self.board[src - 0x10] == None {
                     let dest = src - UP - UP;
                     if let None = self.board[dest] {
                         if let Some(m) = self.make_move(src, dest) {
@@ -775,35 +775,37 @@ mod tests {
         let moves = game.generate_ply();
         let mut output = HashMap::<&str, usize>::new();
 
+        const DEPTH: usize = 3;
+
         for new_move in moves {
             let mut levels = [Level {
                 moves: 0,
                 captures: 0,
                 checks: 0,
-            }; 3];
+            }; DEPTH];
             let mut all = vec![];
-            perft_ply(&mut levels, &new_move, 2, &mut all);
+            perft_ply(&mut levels, &new_move, DEPTH - 1, &mut all);
             match diff_board(&game, &new_move) {
-                (0x20, Piece::Pawn(0)) => output.insert("a2a3", levels[2].moves),
-                (0x21, _) => output.insert("b2b3", levels[2].moves),
-                (0x22, Piece::Pawn(2)) => output.insert("c2c3", levels[2].moves),
-                (0x23, _) => output.insert("d2d3", levels[2].moves),
-                (0x24, _) => output.insert("e2e3", levels[2].moves),
-                (0x25, Piece::Pawn(5)) => output.insert("f2f3", levels[2].moves),
-                (0x26, _) => output.insert("g2g3", levels[2].moves),
-                (0x27, Piece::Pawn(7)) => output.insert("h2h3", levels[2].moves),
-                (0x30, _) => output.insert("a2a4", levels[2].moves),
-                (0x31, _) => output.insert("b2b4", levels[2].moves),
-                (0x32, _) => output.insert("c2c4", levels[2].moves),
-                (0x33, _) => output.insert("d2d4", levels[2].moves),
-                (0x34, _) => output.insert("e2e4", levels[2].moves),
-                (0x35, _) => output.insert("f2f4", levels[2].moves),
-                (0x36, _) => output.insert("g2g4", levels[2].moves),
-                (0x37, _) => output.insert("h2h4", levels[2].moves),
-                (0x20, _) => output.insert("b1a3", levels[2].moves),
-                (0x22, _) => output.insert("b1c3", levels[2].moves),
-                (0x25, _) => output.insert("g1f3", levels[2].moves),
-                (0x27, _) => output.insert("g1h3", levels[2].moves),
+                (0x20, Piece::Pawn(0)) => output.insert("a2a3", levels[DEPTH - 1].moves),
+                (0x21, _) => output.insert("b2b3", levels[DEPTH - 1].moves),
+                (0x22, Piece::Pawn(2)) => output.insert("c2c3", levels[DEPTH - 1].moves),
+                (0x23, _) => output.insert("d2d3", levels[DEPTH - 1].moves),
+                (0x24, _) => output.insert("e2e3", levels[DEPTH - 1].moves),
+                (0x25, Piece::Pawn(5)) => output.insert("f2f3", levels[DEPTH - 1].moves),
+                (0x26, _) => output.insert("g2g3", levels[DEPTH - 1].moves),
+                (0x27, Piece::Pawn(7)) => output.insert("h2h3", levels[DEPTH - 1].moves),
+                (0x30, _) => output.insert("a2a4", levels[DEPTH - 1].moves),
+                (0x31, _) => output.insert("b2b4", levels[DEPTH - 1].moves),
+                (0x32, _) => output.insert("c2c4", levels[DEPTH - 1].moves),
+                (0x33, _) => output.insert("d2d4", levels[DEPTH - 1].moves),
+                (0x34, _) => output.insert("e2e4", levels[DEPTH - 1].moves),
+                (0x35, _) => output.insert("f2f4", levels[DEPTH - 1].moves),
+                (0x36, _) => output.insert("g2g4", levels[DEPTH - 1].moves),
+                (0x37, _) => output.insert("h2h4", levels[DEPTH - 1].moves),
+                (0x20, _) => output.insert("b1a3", levels[DEPTH - 1].moves),
+                (0x22, _) => output.insert("b1c3", levels[DEPTH - 1].moves),
+                (0x25, _) => output.insert("g1f3", levels[DEPTH - 1].moves),
+                (0x27, _) => output.insert("g1h3", levels[DEPTH - 1].moves),
                 _ => panic!("unexpected move"),
             };
         }
@@ -833,9 +835,9 @@ mod tests {
                 _ => panic!("wrong symbol"),
             } {
                 println!("{}: {}", k, v);
+                assert!(false);
             }
         }
-        assert!(false);
     }
 
     fn diff_board(a: &Game, b: &Game) -> (usize, Piece) {
