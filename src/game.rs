@@ -86,16 +86,16 @@ pub struct Game {
 
 impl Display for Game {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let res = writeln!(f, "  A B C D E F G H");
+        let mut res = writeln!(f, "  A B C D E F G H");
         for i in (1..9).rev() {
-            write!(f, "{} ", i);
+            res = res.and_then(|_| write!(f, "{} ", i));
             for j in 0..8 {
                 match self.board[j + ((i - 1) * 2) * 8] {
-                    Some(s) => write!(f, "{} ", s),
-                    None => write!(f, "  "),
+                    Some(s) => res = res.and_then(|_| write!(f, "{} ", s)),
+                    None => res = res.and_then(|_| write!(f, "  ")),
                 };
             }
-            write!(f, "\n");
+            res = res.and_then(|_| write!(f, "\n"));
         }
 
         res
@@ -346,7 +346,6 @@ impl Game {
 
             // Detect white attacking pawns - which attack from below
             } else {
-                // println!("{:#02x} {}", position, offset);
                 if let Some(attack) = position.checked_sub(*offset) {
                     if let Some(Space {
                         piece: Piece::Pawn(_),
@@ -732,12 +731,7 @@ mod tests {
         checks: usize,
     }
 
-    fn perft_ply<const N: usize>(
-        levels: &mut [Level; N],
-        game: &Game,
-        depth: usize,
-        all: &mut Vec<Game>,
-    ) {
+    fn perft_ply<const N: usize>(levels: &mut [Level; N], game: &Game, depth: usize) {
         if depth == 0 {
             return;
         }
@@ -746,8 +740,16 @@ mod tests {
         levels[levels.len() - depth].moves += moves.len();
 
         for new_game in moves {
-            all.push(new_game.clone());
             if new_game.black.check || new_game.white.check {
+                println!(
+                    "{} {}",
+                    new_game,
+                    if new_game.black.check {
+                        "black"
+                    } else {
+                        "white"
+                    }
+                );
                 levels[levels.len() - depth].checks += 1;
             }
             if new_game.black.pieces.len() + new_game.white.pieces.len()
@@ -764,7 +766,7 @@ mod tests {
                 }
             }
 
-            perft_ply(levels, &new_game, depth - 1, all);
+            perft_ply(levels, &new_game, depth - 1);
         }
     }
 
@@ -775,7 +777,7 @@ mod tests {
         let moves = game.generate_ply();
         let mut output = HashMap::<&str, usize>::new();
 
-        const DEPTH: usize = 3;
+        const DEPTH: usize = 4;
 
         for new_move in moves {
             let mut levels = [Level {
@@ -783,8 +785,7 @@ mod tests {
                 captures: 0,
                 checks: 0,
             }; DEPTH];
-            let mut all = vec![];
-            perft_ply(&mut levels, &new_move, DEPTH - 1, &mut all);
+            perft_ply(&mut levels, &new_move, DEPTH - 1);
             match diff_board(&game, &new_move) {
                 (0x20, Piece::Pawn(0)) => output.insert("a2a3", levels[DEPTH - 1].moves),
                 (0x21, _) => output.insert("b2b3", levels[DEPTH - 1].moves),
@@ -812,26 +813,26 @@ mod tests {
 
         for (k, v) in output {
             if v != match k {
-                "a2a3" => 380,
-                "b2b3" => 420,
-                "c2c3" => 420,
-                "d2d3" => 539,
-                "e2e3" => 599,
-                "f2f3" => 380,
-                "g2g3" => 420,
-                "h2h3" => 380,
-                "a2a4" => 420,
-                "b2b4" => 421,
-                "c2c4" => 441,
-                "d2d4" => 560,
-                "e2e4" => 600,
-                "f2f4" => 401,
-                "g2g4" => 421,
-                "h2h4" => 420,
-                "b1a3" => 400,
-                "b1c3" => 440,
-                "g1f3" => 440,
-                "g1h3" => 400,
+                "a2a3" => 8457,
+                "b2b3" => 9345,
+                "c2c3" => 9272,
+                "d2d3" => 11959,
+                "e2e3" => 13134,
+                "f2f3" => 8457,
+                "g2g3" => 9345,
+                "h2h3" => 8457,
+                "a2a4" => 9329,
+                "b2b4" => 9332,
+                "c2c4" => 9744,
+                "d2d4" => 12435,
+                "e2e4" => 13160,
+                "f2f4" => 8929,
+                "g2g4" => 9328,
+                "h2h4" => 9329,
+                "b1a3" => 8885,
+                "b1c3" => 9755,
+                "g1f3" => 9748,
+                "g1h3" => 8881,
                 _ => panic!("wrong symbol"),
             } {
                 println!("{}: {}", k, v);
@@ -882,54 +883,52 @@ mod tests {
             },
         ];
 
-        let mut all = vec![];
-
         let game = Game::new();
         let mut levels = [Level {
             moves: 0,
             captures: 0,
             checks: 0,
         }; 4];
-        perft_ply(&mut levels, &game, 4, &mut all);
+        perft_ply(&mut levels, &game, 4);
 
         assert_eq!(correct_levels, levels);
     }
 
-    // #[test]
-    // pub fn perft_in() {
-    //     let correct_levels = [
-    //         Level {
-    //             moves: 14,
-    //             captures: 1,
-    //             checks: 2,
-    //         },
-    //         Level {
-    //             moves: 191,
-    //             captures: 14,
-    //             checks: 10,
-    //         },
-    //         Level {
-    //             moves: 2812,
-    //             captures: 209,
-    //             checks: 267,
-    //         },
-    //         Level {
-    //             moves: 43238,
-    //             captures: 3348,
-    //             checks: 1680,
-    //         },
-    //     ];
+    #[test]
+    pub fn perft_in() {
+        let correct_levels = [
+            Level {
+                moves: 14,
+                captures: 1,
+                checks: 2,
+            },
+            Level {
+                moves: 191,
+                captures: 14,
+                checks: 10,
+            },
+            // Level {
+            //     moves: 2812,
+            //     captures: 209,
+            //     checks: 267,
+            // },
+            // Level {
+            //     moves: 43238,
+            //     captures: 3348,
+            //     checks: 1680,
+            // },
+        ];
 
-    //     let game = Game::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -".to_string());
-    //     let mut levels = [Level {
-    //         moves: 0,
-    //         captures: 0,
-    //         checks: 0,
-    //     }; 4];
-    //     perft_ply(&mut levels, game, 4);
+        let game = Game::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -".to_string());
+        let mut levels = [Level {
+            moves: 0,
+            captures: 0,
+            checks: 0,
+        }; 2];
+        perft_ply(&mut levels, &game, 2);
 
-    //     assert_eq!(correct_levels, levels);
-    // }
+        assert_eq!(correct_levels, levels);
+    }
 
     #[test]
     pub fn parse_fen_matches_default() {
